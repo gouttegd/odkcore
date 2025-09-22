@@ -1,0 +1,50 @@
+[project]
+name = "odk-core"
+version = "1.7.0"
+description = "Ontology Development Kit Core"
+license = "BSD-3-Clause"
+authors = [
+    {name="Damien Goutte-Gattat", email="dgouttegattat@incenp.org"},
+    {name="Nicolas Matentzoglu", email="nicolas.matentzoglu@gmail.com"}
+]
+readme = "README.md"
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "click",
+    "dacite",
+    "dataclasses-json",
+    "dataclasses-jsonschema",
+    "defusedxml",
+    "jinja2",
+    "pyyaml",
+]
+
+[project.urls]
+Homepage = "http://incatools.github.io/ontology-development-kit"
+Repository = "https://github.com/gouttegd/odkcore"
+
+[project.scripts]
+odk = "incatools.odk.cli:main"
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "incatools.odk"
+
+[dependency-groups]
+dev = [
+    "black",
+    "mypy",
+    "types-PyYAML",
+    "types-defusedxml",
+    "isort",
+    "flake8",
+]
