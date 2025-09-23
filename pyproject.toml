@@ -41,10 +41,8 @@ module-name = "incatools.odk"
 
 [dependency-groups]
 dev = [
-    "black",
+    "ruff",
     "mypy",
     "types-PyYAML",
     "types-defusedxml",
-    "isort",
-    "flake8",
 ]

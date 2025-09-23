@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from dacite import from_dict
 
-from .model import ImportGroup, OntologyProject, ImportProduct
+from .model import ImportGroup, ImportProduct, OntologyProject
 
 
 def load_config(
@@ -95,7 +95,7 @@ def update_stubs(obj: Dict[str, Any]) -> None:
         group = obj[group_name]
         if not isinstance(group, dict):
             continue
-        if not "products" in group:
+        if "products" not in group:
             group["products"] = []
         stubs = group.get("ids")
         if isinstance(stubs, list):

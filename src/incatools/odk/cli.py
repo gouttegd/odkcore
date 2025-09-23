@@ -10,12 +10,11 @@ import logging
 import os
 import shutil
 from shutil import copy
-from typing import Any, Dict, List, Optional, Set, Union
 
 import click
 import yaml
 
-from .config import load_config, save_project_yaml
+from .config import load_config, save_project_yaml, update_config_dict
 from .template import DEFAULT_TEMPLATE_DIR, Generator, InstallPolicy
 from .util import format_yaml_error, runcmd
 
@@ -68,7 +67,7 @@ def export_project(config, output):
         mg = Generator(load_config(config))
     except yaml.YAMLError as exc:
         raise click.ClickException(format_yaml_error(config, exc))
-    project = mgproject
+    project = mg.project
     save_project_yaml(project, output)
 
 
@@ -235,11 +234,11 @@ def seed(
     if outdir is None:
         outdir = "target/{}".format(project.id)
     if not skipgit:
-        if not "GIT_AUTHOR_NAME" in os.environ and not gitname:
+        if "GIT_AUTHOR_NAME" not in os.environ and not gitname:
             raise click.ClickException(
                 "missing Git username; set GIT_AUTHOR_NAME or use --gitname"
             )
-        if not "GIT_AUTHOR_EMAIL" in os.environ and not gitemail:
+        if "GIT_AUTHOR_EMAIL" not in os.environ and not gitemail:
             raise click.ClickException(
                 "missing Git email; set GIT_AUTHOR_EMAIL or use --gitemail"
             )

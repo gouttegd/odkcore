@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from shutil import copy, copymode
-from typing import IO, List, Optional, Tuple, Union
+from typing import IO, List, Optional, Tuple
 from xml.etree import ElementTree
 
 from defusedxml import ElementTree as DefusedElementTree
@@ -80,7 +80,7 @@ class Generator(object):
         for line in lines:
             if line.startswith(MARKER):
                 # Close previous file, if any
-                if f != None:
+                if f is not None:
                     f.close()
                 filename = line.replace(MARKER, "")
                 path = os.path.join(basedir, filename)
@@ -99,7 +99,7 @@ class Generator(object):
                             'File marker "{}" required in "{}"'.format(MARKER, line)
                         )
                 f.write(line + "\n")
-        if f != None:
+        if f is not None:
             f.close()
         return tgts
 
@@ -168,7 +168,7 @@ class Generator(object):
         if os.path.exists(target_file):
             with open(target_file, "r") as f:
                 exclude = False
-                for line in [l.strip() for l in f]:
+                for line in [ln.strip() for ln in f]:
                     if line == "# ODK-managed rules, do not modify":
                         exclude = True
                     elif line == "# End of ODK-managed rules":
@@ -182,7 +182,7 @@ class Generator(object):
                 if len(line) > 0:
                     already_written[line] = 1
                 f.write(line + "\n")
-            for line in [l for l in existing_lines if l not in already_written]:
+            for line in [ln for ln in existing_lines if ln not in already_written]:
                 f.write(line + "\n")
 
     def update_xml_catalog(self, template_file: str, target_file: str) -> None:
@@ -263,7 +263,7 @@ class Generator(object):
         else:
             base += project.id
 
-        if not "ROBOT_PLUGINS_DIRECTORY" in os.environ:
+        if "ROBOT_PLUGINS_DIRECTORY" not in os.environ:
             os.environ["ROBOT_PLUGINS_DIRECTORY"] = pluginsdir
 
         ignore_missing_imports = "-Dorg.semantic.web.owlapi.model.parameters.ConfigurationOptions.MISSING_IMPORT_HANDLING_STRATEGY=SILENT"

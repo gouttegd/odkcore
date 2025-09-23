@@ -882,7 +882,7 @@ class OntologyProject(JsonSchemaMixin):
         if self.components is not None:
             self.components.derive_fields(self)
 
-        if not "--clean-obo" in self.robot.obo_format_options:
+        if "--clean-obo" not in self.robot.obo_format_options:
             if len(self.robot.obo_format_options) > 0:
                 self.robot.obo_format_options += " "
             self.robot.obo_format_options += (
