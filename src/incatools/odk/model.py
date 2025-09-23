@@ -272,24 +272,7 @@ class ProductGroup(JsonSchemaMixin):
     A product group is a simple holder for a list of
     groups, with the ability to set configurations that
     hold by default for all within that group.
-
-    Note: currently the configuration can specify
-    EITHER a list of ontology ids (e.g. uberon, cl)
-    OR a list of product objects
-    OR some mixture
-
-    For example, in specifying upstream imports I can
-    be lazy and just list the ids, but if I need to
-    configure each one individually then I need to specify
-    the full product object.
-
-    This buys some simplicity for the majority of projects
-    that don't do anything fancy, but at the price of overall
-    complexity
     """
-
-    ids: Optional[List[OntologyHandle]] = None
-    """potentially deprecated, specify explicit product list instead"""
 
     disabled: bool = False
     """if set then this is not used"""
@@ -297,16 +280,7 @@ class ProductGroup(JsonSchemaMixin):
     rebuild_if_source_changes: bool = True
     """if false then upstream ontology is re-downloaded any time edit file changes"""
 
-    def fill_missing(self, project):
-        if self.products is None:
-            self.products = []
-        if self.ids is not None:
-            for id in self.ids:
-                if id not in [p.id for p in self.products]:
-                    self._add_stub(id)
-        self._derive_fields(project)
-
-    def _derive_fields(self, project):
+    def derive_fields(self, project):
         pass
 
 
@@ -319,13 +293,8 @@ class SubsetGroup(ProductGroup):
     Controls export of subsets/slims into the "subsets/" directory
     """
 
-    products: Optional[List[SubsetProduct]] = None
+    products: List[SubsetProduct] = field(default_factory=lambda: [])
     """all subset products"""
-
-    def _add_stub(self, id: OntologyHandle):
-        if self.products is None:
-            self.products = []
-        self.products.append(SubsetProduct(id=id))
 
 
 @dataclass_json
@@ -337,7 +306,7 @@ class ImportGroup(ProductGroup):
     Controls extraction of import modules via robot extract into the "imports/" directory
     """
 
-    products: Optional[List[ImportProduct]] = None
+    products: List[ImportProduct] = field(default_factory=lambda: [])
     """all import products"""
 
     module_type: str = "slme"
@@ -391,12 +360,7 @@ class ImportGroup(ProductGroup):
        Protégé-based declarations of terms to import impossible.
     """
 
-    def _add_stub(self, id: OntologyHandle):
-        if self.products is None:
-            self.products = []
-        self.products.append(ImportProduct(id=id))
-
-    def _derive_fields(self, project):
+    def derive_fields(self, project):
         self.special_products = []
         for p in self.products:
             if p.module_type is None:
@@ -506,15 +470,10 @@ class ComponentGroup(ProductGroup):
     Controls extraction of import modules via robot extract into the "components/" directory
     """
 
-    products: Optional[List[ComponentProduct]] = None
+    products: List[ComponentProduct] = field(default_factory=lambda: [])
     """all component products"""
 
-    def _add_stub(self, filename: str):
-        if self.products is None:
-            self.products = []
-        self.products.append(ComponentProduct(filename=filename))
-
-    def _derive_fields(self, project):
+    def derive_fields(self, project):
         for product in self.products:
             if product.base_iris is None:
                 product.base_iris = [project.uribase + "/" + project.id.upper()]
@@ -533,16 +492,11 @@ class PatternPipelineGroup(ProductGroup):
     Controls the handling of patterns data in the "src/patterns/data" directory
     """
 
-    products: Optional[List[PatternPipelineProduct]] = None
+    products: List[PatternPipelineProduct] = field(default_factory=lambda: [])
     """all pipeline products"""
 
     matches: Optional[List[PatternPipelineProduct]] = None
     """pipelines specifically configured for matching, NOT generating."""
-
-    def _add_stub(self, id: OntologyHandle):
-        if self.products is None:
-            self.products = []
-        self.products.append(PatternPipelineProduct(id=id))
 
 
 @dataclass_json
@@ -558,11 +512,9 @@ class SSSOMMappingSetGroup(JsonSchemaMixin):
     mapping_extractor: str = "sssom-py"
     """The tool to use to extract mappings from an ontology ('sssom-py' or 'sssom-java')."""
 
-    products: Optional[List[SSSOMMappingSetProduct]] = None
+    products: List[SSSOMMappingSetProduct] = field(default_factory=lambda: [])
 
-    def fill_missing(self, project):
-        if self.products is None:  # Huh? Ignore.
-            return
+    def derive_fields(self, project):
         if self.release_mappings:  # All sets are released
             released_products = [p for p in self.products]
         else:  # Only some selected sets are released
@@ -594,14 +546,9 @@ class BridgeGroup(ProductGroup):
     A configuration section that consists of a list of `BridgeProduct` descriptions
     """
 
-    products: Optional[List[BridgeProduct]] = None
+    products: List[BridgeProduct] = field(default_factory=lambda: [])
 
-    def _add_stub(self, id):
-        if self.products is None:
-            self.products = []
-        self.products.append(SubsetProduct(id=id))
-
-    def _derive_fields(self, project):
+    def derive_fields(self, project):
         for product in [p for p in self.products if p.bridge_type == "sssom"]:
             if project.sssom_mappingset_group is None:
                 raise Exception(
@@ -920,27 +867,20 @@ class OntologyProject(JsonSchemaMixin):
     release_diff: bool = False
     """When enabled, a diff is generated between the current release and the new one"""
 
-    def fill_missing(self):
-        """
-        Each group consists of a list of product objects.
-        The config can be lazy and just specify an id list.
-        These are used to create stub product objects.
-
-        This method is also intended to perform any checks
-        and initialisations on the entire configuration tree.
-        """
+    def derive_fields(self):
+        """Derives default values whenever needed."""
         if self.import_group is not None:
-            self.import_group.fill_missing(self)
+            self.import_group.derive_fields(self)
         if self.subset_group is not None:
-            self.subset_group.fill_missing(self)
+            self.subset_group.derive_fields(self)
         if self.pattern_pipelines_group is not None:
-            self.pattern_pipelines_group.fill_missing(self)
+            self.pattern_pipelines_group.derive_fields(self)
         if self.sssom_mappingset_group is not None:
-            self.sssom_mappingset_group.fill_missing(self)
+            self.sssom_mappingset_group.derive_fields(self)
         if self.bridge_group is not None:
-            self.bridge_group.fill_missing(self)
+            self.bridge_group.derive_fields(self)
         if self.components is not None:
-            self.components.fill_missing(self)
+            self.components.derive_fields(self)
 
         if not "--clean-obo" in self.robot.obo_format_options:
             if len(self.robot.obo_format_options) > 0:

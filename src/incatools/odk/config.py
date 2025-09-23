@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from dacite import from_dict
 
-from .model import ImportGroup, OntologyProject
+from .model import ImportGroup, OntologyProject, ImportProduct
 
 
 def load_config(
@@ -34,6 +34,7 @@ def load_config(
             config_hash = h.hexdigest()
             stream.seek(0)
             obj = yaml.load(stream, Loader=yaml.FullLoader)
+        update_stubs(obj)
         update_config_dict(obj)
         project = from_dict(data_class=OntologyProject, data=obj)
     if config_hash:
@@ -47,9 +48,59 @@ def load_config(
     if imports:
         if project.import_group is None:
             project.import_group = ImportGroup()
-        project.import_group.ids = imports
-    project.fill_missing()
+        for imp in imports:
+            project.import_group.products.append(ImportProduct(id=imp))
+    project.derive_fields()
     return project
+
+
+def update_stubs(obj: Dict[str, Any]) -> None:
+    """
+    Updates a configuration dictionary to replace old-style "stubs".
+
+    The ODK configuration file accepts two different ways of listing products
+    within a group (e.g., imports).
+
+    Either as an explicit list of product objects:
+
+    ```
+    import_group:
+      products:
+        - id: a-product
+        - id: another-product
+    ```
+
+    Or as an implicit list of product IDs:
+
+    ```
+    import_group:
+      ids:
+        - a-product
+        - another-product
+    ```
+
+    This function transforms the second form into the first one, which is
+    the form expected by the model.
+    """
+    for group_name in [
+        "import_group",
+        "subset_group",
+        "pattern_pipelines_group",
+        "sssom_mappingset_group",
+        "bridge_group",
+        "components",
+    ]:
+        if group_name not in obj:
+            continue
+        group = obj[group_name]
+        if not isinstance(group, dict):
+            continue
+        if not "products" in group:
+            group["products"] = []
+        stubs = group.get("ids")
+        if isinstance(stubs, list):
+            for stub in stubs:
+                group["products"].append({"id": stub})
 
 
 def update_config_dict(obj: Dict[str, Any]) -> None:

@@ -276,10 +276,10 @@ class Generator(object):
         if project.import_group is not None:
             if project.import_group.use_base_merging:
                 cmd += f" --add {base}/imports/merged_import.owl"
-            elif project.import_group.products is not None:
+            else:
                 for product in project.import_group.products:
                     cmd += f" --add {base}/imports/{product.id}_import.owl"
-        if project.components is not None and project.components.products is not None:
+        if project.components is not None:
             for component in project.components.products:
                 cmd += f" --add {base}/components/{component.filename}"
         if project.use_dosdps:
