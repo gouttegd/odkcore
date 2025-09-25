@@ -14,14 +14,14 @@ from shutil import copy
 import click
 import yaml
 
-from .config import load_config, save_config, update_config_dict
+from .config import ConfigurationError, load_config, load_config_dict, save_config
 from .template import DEFAULT_TEMPLATE_DIR, Generator, InstallPolicy
-from .util import format_yaml_error, runcmd
+from .util import runcmd
 
 
 @click.group()
 def main():
-    pass
+    logging.basicConfig(level=logging.INFO)
 
 
 @main.command()
@@ -35,8 +35,8 @@ def create_makefile(config, templatedir, input, output):
     """
     try:
         mg = Generator(load_config(config))
-    except yaml.YAMLError as exc:
-        raise click.ClickException(format_yaml_error(config, exc))
+    except ConfigurationError as ce:
+        raise click.ClickException(ce)
     print(mg.generate("{}/src/ontology/Makefile.jinja2".format(templatedir)))
 
 
@@ -51,8 +51,8 @@ def create_dynfile(config, templatedir, input, output):
     """
     try:
         mg = Generator(load_config(config))
-    except yaml.YAMLError as exc:
-        raise click.ClickException(format_yaml_error(config, exc))
+    except ConfigurationError as ce:
+        raise click.ClickException(ce)
     print(mg.generate("{}/_dynamic_files.jinja2".format(templatedir)))
 
 
@@ -65,8 +65,8 @@ def export_project(config, output):
     """
     try:
         mg = Generator(load_config(config))
-    except yaml.YAMLError as exc:
-        raise click.ClickException(format_yaml_error(config, exc))
+    except ConfigurationError as ce:
+        raise click.ClickException(ce)
     save_config(mg.project, output)
 
 
@@ -77,9 +77,10 @@ def update_config(config, output):
     """
     Updates a configuration file to account for renamed or moved options.
     """
-    with open(config, "r") as f:
-        cfg = yaml.load(f, Loader=yaml.FullLoader)
-    update_config_dict(cfg)
+    try:
+        cfg = load_config_dict(config)[0]
+    except ConfigurationError as ce:
+        raise click.ClickException(ce)
     with open(output, "w") as f:
         f.write(yaml.dump(cfg, default_flow_style=False))
 
@@ -100,8 +101,8 @@ def update(templatedir):
     config = config_matches[0]
     try:
         mg = Generator(load_config(config), templatedir)
-    except yaml.YAMLError as exc:
-        raise click.ClickException(format_yaml_error(config, exc))
+    except ConfigurationError as ce:
+        raise click.ClickException(ce)
     project = mg.project
 
     # When updating, for most files, we only install them if
@@ -226,8 +227,8 @@ def seed(
             config, imports=dependencies, title=title, org=user, repo=repo
         )
         mg = Generator(project, templatedir)
-    except yaml.YAMLError as exc:
-        raise click.ClickException(format_yaml_error(config, exc))
+    except ConfigurationError as ce:
+        raise click.ClickException(ce)
     if project.id is None or project.id == "":
         project.id = repo
     if outdir is None:

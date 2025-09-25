@@ -7,12 +7,78 @@
 
 import logging
 from hashlib import sha256
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 from dacite import from_dict
 
 from .model import ImportGroup, ImportProduct, OntologyProject
+
+
+class ConfigurationError(Exception):
+    """Error thrown on any problem with a ODK configuration file."""
+
+    message: str
+
+    def __init__(self, msg: str):
+        self.message = msg
+
+    def __str__(self):
+        return f"ODK configuration error: {self.message}"
+
+    @staticmethod
+    def from_yaml_error(file: str, exc: yaml.YAMLError) -> "ConfigurationError":
+        """Turns a YAML parser error into a ConfigurationError.
+
+        :param file: The file that triggered the parsing error.
+        :param exc: The YAML parsing error.
+
+        :returns: The ODK-specific configuration error.
+        """
+        msg = "Cannot parse configuration file"
+        if hasattr(exc, "problem_mark") and hasattr(exc, "problem"):
+            err_line = exc.problem_mark.line
+            err_column = exc.problem_mark.column
+            msg += f"\nLine {err_line + 1}, column {err_column + 1}: {exc.problem}"
+            with open(file, "r") as f:
+                line = f.readline()
+                linenr = 1
+                while line and linenr <= err_line:
+                    linenr += 1
+                    line = f.readline()
+            msg += "\n" + line.rstrip()
+            msg += "\n" + " " * err_column + "^"
+        else:
+            msg += ": Unknown YAML error"
+        return ConfigurationError(msg)
+
+
+def load_config_dict(config_file: str) -> Tuple[Dict[str, Any], str]:
+    """Parses a ODK configuration file into a dictionary.
+
+    This method is primarily intended for internal usage, but may be
+    useful for client code that needs to access the "raw" dictionary
+    representing the ODK configuration, rather than a OntologyProject
+    object.
+
+    The parsed dictionary will be automatically updated to reflect the
+    current configuration model, prior to being returned.
+
+    :param config_file: The configuration file to parse.
+
+    :returns: A tuple (D,H) were D is the configuration dictionary, and
+        H is the SHA-256 hash of the configuration as read from file.
+    """
+    with open(config_file, "r") as f:
+        h = sha256()
+        h.update(f.read().encode())
+        f.seek(0)
+        try:
+            obj = yaml.load(f, Loader=yaml.FullLoader)
+        except yaml.YAMLError as exc:
+            raise ConfigurationError.from_yaml_error(config_file, exc)
+    update_config_dict(obj)
+    return (obj, h.hexdigest())
 
 
 def load_config(
@@ -39,19 +105,11 @@ def load_config(
 
     :returns: The loaded ontology project.
     """
-    config_hash = None
     if config_file is None:
         project = OntologyProject()
     else:
-        with open(config_file, "r") as stream:
-            h = sha256()
-            h.update(stream.read().encode())
-            config_hash = h.hexdigest()
-            stream.seek(0)
-            obj = yaml.load(stream, Loader=yaml.FullLoader)
-        update_config_dict(obj)
+        obj, config_hash = load_config_dict(config_file)
         project = from_dict(data_class=OntologyProject, data=obj)
-    if config_hash:
         project.config_hash = config_hash
     if title:
         project.title = title

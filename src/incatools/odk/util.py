@@ -8,34 +8,6 @@
 import logging
 import subprocess
 
-from yaml import YAMLError
-
-
-def format_yaml_error(file: str, exc: YAMLError) -> str:
-    """Turns a YAML parser error into a human-readable error message.
-
-    :param file: The file that triggered the parsing error.
-    :param exc: The YAML parsing error.
-
-    :returns: The formatted error message.
-    """
-    msg = "Cannot parse configuration file"
-    if hasattr(exc, "problem_mark") and hasattr(exc, "problem"):
-        err_line = exc.problem_mark.line
-        err_column = exc.problem_mark.column
-        msg += f"\nLine {err_line + 1}, column {err_column + 1}: {exc.problem}"
-        with open(file, "r") as f:
-            line = f.readline()
-            linenr = 1
-            while line and linenr <= err_line:
-                linenr += 1
-                line = f.readline()
-        msg += "\n" + line.rstrip()
-        msg += "\n" + " " * err_column + "^"
-    else:
-        msg += ": unknown YAML error"
-    return msg
-
 
 def runcmd(cmd: str) -> None:
     """Runs a command in a new process.
