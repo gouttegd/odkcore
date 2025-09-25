@@ -5,7 +5,6 @@
 # terms of a 3-clause BSD license. See the LICENSE file in that project
 # for the detailed conditions.
 
-import json
 import logging
 from hashlib import sha256
 from typing import Any, Dict, List, Optional
@@ -50,7 +49,6 @@ def load_config(
             config_hash = h.hexdigest()
             stream.seek(0)
             obj = yaml.load(stream, Loader=yaml.FullLoader)
-        update_stubs(obj)
         update_config_dict(obj)
         project = from_dict(data_class=OntologyProject, data=obj)
     if config_hash:
@@ -134,6 +132,10 @@ def update_config_dict(obj: Dict[str, Any]) -> None:
 
     :param obj: The dictionary to update.
     """
+    # First take care of stubs, if needed
+    update_stubs(obj)
+
+    # Then all the other changes
     changes = [
         # old key path               new key path
         ("reasoner", "robot.reasoner"),
@@ -223,17 +225,11 @@ def put_key(obj: Dict[str, Any], path: str, value: Any) -> None:
             obj[component] = value
 
 
-def save_project_yaml(project: OntologyProject, path: str) -> None:
+def save_config(project: OntologyProject, path: str) -> None:
     """Saves an ontology project to a file in YAML format.
 
     :param project: The project to save.
     :param path: The pathname where to save the project.
     """
-    # This is a slightly ridiculous bit of tomfoolery, but necessary
-    # As PyYAML will attempt to save as a python object using !!,
-    # so we must first serialize as JSON then parse than JSON to get
-    # a class-free python dict tha can be safely saved
-    json_str = project.to_json()
-    json_obj = json.loads(json_str)
     with open(path, "w") as f:
-        f.write(yaml.dump(json_obj, default_flow_style=False))
+        f.write(yaml.dump(project.to_dict(), default_flow_style=False))

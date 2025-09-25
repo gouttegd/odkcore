@@ -14,7 +14,7 @@ from shutil import copy
 import click
 import yaml
 
-from .config import load_config, save_project_yaml, update_config_dict
+from .config import load_config, save_config, update_config_dict
 from .template import DEFAULT_TEMPLATE_DIR, Generator, InstallPolicy
 from .util import format_yaml_error, runcmd
 
@@ -67,8 +67,7 @@ def export_project(config, output):
         mg = Generator(load_config(config))
     except yaml.YAMLError as exc:
         raise click.ClickException(format_yaml_error(config, exc))
-    project = mg.project
-    save_project_yaml(project, output)
+    save_config(mg.project, output)
 
 
 @main.command()
@@ -257,7 +256,7 @@ def seed(
 
     tgt_project_file = "{}/project.yaml".format(outdir)
     if project.export_project_yaml:
-        save_project_yaml(project, tgt_project_file)
+        save_config(project, tgt_project_file)
         tgts.append(tgt_project_file)
     if source is not None:
         copy(
@@ -271,7 +270,7 @@ def seed(
     if config is not None:
         copy(config, odk_config_file)
     else:
-        save_project_yaml(project, odk_config_file)
+        save_config(project, odk_config_file)
     logging.info("Created files:")
     for tgt in tgts:
         logging.info("  File: {}".format(tgt))
