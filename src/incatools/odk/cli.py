@@ -151,7 +151,7 @@ def update(templatedir):
         mg.update_xml_catalog(
             templatedir + "/src/ontology/catalog-v001.xml.jinja2", "catalog-v001.xml"
         )
-        mg.update_import_declarations(project)
+        mg.update_import_declarations()
     else:
         print("WARNING: You may need to update the -edit file and the XML catalog")
         print("         if you have added/removed/modified any import or component.")

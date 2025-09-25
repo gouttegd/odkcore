@@ -23,7 +23,23 @@ def load_config(
     org: Optional[str] = None,
     repo: Optional[str] = None,
 ) -> OntologyProject:
-    """Parses a project.yaml file into a Ontology Project."""
+    """Parses a project.yaml file into a Ontology Project.
+
+    :param config_file: Loads the project from the specified config file.
+        If unset, a brand new project is created.
+    :param imports: The imports the new project should use. If a config
+        file is also used, the imports will be added to those already
+        described in the configuration.
+    :param title: The title of the new project. Will supersede any value
+        set in the configuration file.
+    :param org: The organisation owning the repository where the project
+        will be hosted. Will supersede any value set in the configuration
+        file.
+    :param repo: The name of the repository where the project will be
+        hosted. Will supersede any value set in the configuration file.
+
+    :returns: The loaded ontology project.
+    """
     config_hash = None
     if config_file is None:
         project = OntologyProject()
@@ -55,8 +71,7 @@ def load_config(
 
 
 def update_stubs(obj: Dict[str, Any]) -> None:
-    """
-    Updates a configuration dictionary to replace old-style "stubs".
+    """Updates a configuration dictionary to replace old-style "stubs".
 
     The ODK configuration file accepts two different ways of listing products
     within a group (e.g., imports).
@@ -81,6 +96,8 @@ def update_stubs(obj: Dict[str, Any]) -> None:
 
     This function transforms the second form into the first one, which is
     the form expected by the model.
+
+    :param obj: The dictionary to update.
     """
     for group_name in [
         "import_group",
@@ -104,9 +121,18 @@ def update_stubs(obj: Dict[str, Any]) -> None:
 
 
 def update_config_dict(obj: Dict[str, Any]) -> None:
-    """
-    Updates a config dictionary to replace keys that have been renamed
-    or moved.
+    """Updates a config dictionary to the latest version of the model.
+
+    The model for an ontology project (as defined in the model module)
+    may change at anytime, but existing configuration files must remain
+    usable. To achieve that, this method will silently update the
+    configuration dictionary (as read from the configuration file) to
+    replace keys that have been renamed or moved.
+
+    The onus is on whoever introduces a change to the project model to
+    update this function so that it can accomodates the change.
+
+    :param obj: The dictionary to update.
     """
     changes = [
         # old key path               new key path
@@ -129,21 +155,27 @@ def update_config_dict(obj: Dict[str, Any]) -> None:
 
 
 def pop_key(obj: Dict[str, Any], path: str) -> Optional[str]:
-    """
-    Gets the value of the key at the specified path, exploring
-    subdictionaries recursively as needed. The terminal key, if found,
-    is removed from the dictionary.
+    """Gets the value of a key in a nested dictionary structure.
 
-    For example,
+    This function will interpret any dot in the provided ``path`` as a
+    jump into a nested dictionary.
+
+    For example::
 
       pop_key(my_dict, 'path.to.key')
 
-    is equivalent to
+    is equivalent to::
 
       my_dict.get('path', {}).get('to', {}).pop('key', None)
 
-    Returns None if any of the keys does not exist, or if one of the
-    parent keys exists but is not a dictionary.
+    The terminal key, if found, is removed from the dictionary.
+
+    :param obj: The top-level dictionary to query.
+    :param path: The path identifying the key to retrieve.
+
+    :returns: The retrieved value. May be None if any of the components
+        of ``path`` does not exist, or if one the component exists but
+        is not a dictionary.
     """
     components = path.split(".")
     n = len(components)
@@ -159,20 +191,26 @@ def pop_key(obj: Dict[str, Any], path: str) -> Optional[str]:
 
 
 def put_key(obj: Dict[str, Any], path: str, value: Any) -> None:
-    """
-    Puts a value in a dictionary at the specified path, going through
-    subdictionaries recursively as needed.
+    """Puts a value in a nested dictionary structure.
 
-    For example,
+    This function will interpret any dot in the provided ``path`` as a
+    jump into a nested dictionary.
+
+    For example::
 
       put_key(my_dict, 'path.to.key', value)
 
-    is almost equivalent to
+    is almost equivalent to::
 
       my_dict['path']['to']['key'] = value
 
     except that intermediate dictionaries are automatically created if
     they do not already exist.
+
+    :param obj: The top-level dictionary to modify.
+    :param path: The path identifying the key to set.
+
+    :param value: The new value to set.
     """
     components = path.split(".")
     n = len(components)
@@ -186,8 +224,10 @@ def put_key(obj: Dict[str, Any], path: str, value: Any) -> None:
 
 
 def save_project_yaml(project: OntologyProject, path: str) -> None:
-    """
-    Saves an ontology project to a file in YAML format
+    """Saves an ontology project to a file in YAML format.
+
+    :param project: The project to save.
+    :param path: The pathname where to save the project.
     """
     # This is a slightly ridiculous bit of tomfoolery, but necessary
     # As PyYAML will attempt to save as a python object using !!,

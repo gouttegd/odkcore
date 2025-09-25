@@ -12,8 +12,12 @@ from yaml import YAMLError
 
 
 def format_yaml_error(file: str, exc: YAMLError) -> str:
-    """
-    Prints a human-readable error message from a YAML parser error.
+    """Turns a YAML parser error into a human-readable error message.
+
+    :param file: The file that triggered the parsing error.
+    :param exc: The YAML parsing error.
+
+    :returns: The formatted error message.
     """
     msg = "Cannot parse configuration file"
     if hasattr(exc, "problem_mark") and hasattr(exc, "problem"):
@@ -34,6 +38,12 @@ def format_yaml_error(file: str, exc: YAMLError) -> str:
 
 
 def runcmd(cmd: str) -> None:
+    """Runs a command in a new process.
+
+    An exception will be thrown if the command fails for any reason.
+
+    :param cmd: The command to run.
+    """
     logging.info("RUNNING: {}".format(cmd))
     p = subprocess.Popen(
         [cmd],

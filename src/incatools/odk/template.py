@@ -26,25 +26,74 @@ DEFAULT_TEMPLATE_DIR = Path(__file__).parent.resolve() / "templates"
 
 
 class InstallPolicy(Enum):
+    """A policy to decide whether to install a given file or not."""
+
     IF_MISSING = 0
+    """Install the file only if it does not already exist."""
+
     ALWAYS = 1
+    """Always install the file, overwriting any existing file."""
+
     NEVER = 2
+    """Never install the file."""
 
 
 PolicyList = List[Tuple[str, InstallPolicy]]
 
 
+def _must_install_file(
+    templatefile: str, targetfile: str, policies: PolicyList
+) -> bool:
+    """Determines whether a given file should be installed.
+
+    Given a template filename, this function determines whether the file
+    should be installed according to any per-file policy.
+
+    policies is a list of (PATTERN,POLICY) tuples where PATTERN is
+    a shell-like globbing pattern and POLICY is the update policy
+    that should be applied to any template whose pathname matches
+    the pattern.
+
+    Patterns are tested in the order they are found in the list,
+    and the first match takes precedence over any subsequent match.
+    If there is no match, the default policy is IF_MISSING.
+
+    :param templatefile: The name of the template, relative to the root
+        template directory.
+    :param targetfile: Where the template should be instanciated, as
+        either an absolute pathname or a pathname relative to the
+        current working directory.
+    :param policies: The list of per-file policies as explained above.
+
+    :returns: True if the file is to be installed, False otherwise.
+    """
+    policy = InstallPolicy.IF_MISSING
+    for pattern, pattern_policy in policies:
+        if fnmatch.fnmatch(templatefile, pattern):
+            policy = pattern_policy
+            break
+    if policy == InstallPolicy.ALWAYS:
+        return True
+    elif policy == InstallPolicy.NEVER:
+        return False
+    else:
+        return not os.path.exists(targetfile)
+
+
 @dataclass
 class Generator(object):
-    """
-    Utility class for generating a variety of ontology project artefacts
-    from jinja2 templates
-    """
+    """Generates ontology project artefacts from Jinja2 templates."""
 
     project: OntologyProject
     templatedir: Path
 
-    def __init__(self, project: OntologyProject, templatedir: Optional[str]):
+    def __init__(self, project: OntologyProject, templatedir: Optional[str] = None):
+        """Creates a new instance for the specified ontology project.
+
+        :param project: The project for which to generate artefacts.
+        :param templatedir: The directory containing the Jinja2 templates.
+            The default is to use the templates bundled with the package.
+        """
         self.project = project
         if templatedir is not None:
             self.templatedir = Path(templatedir)
@@ -52,9 +101,11 @@ class Generator(object):
             self.templatedir = DEFAULT_TEMPLATE_DIR
 
     def generate(self, input: str) -> str:
-        """
-        Given a path to an input template, renders the template
-        using the current execution context
+        """Renders one template file.
+
+        :param input: The path to the template to instanciate.
+
+        :returns: The text of the instanciated template.
         """
         with open(input) as file_:
             template = Template(file_.read())
@@ -66,11 +117,20 @@ class Generator(object):
                 return template.render(project=self.project)
 
     def unpack_files(self, basedir: str, txt: str, policies: PolicyList) -> List[str]:
-        """
-        This unpacks a custom tar-like format in which multiple file paths
-        can be specified, separated by ^^^s
+        """Unpack all files found in a dynamic files pack.
 
-        See the file template/_dynamic_files.jinja2 for an example of this
+        A "dynamic files pack" uses a custom tar-like format in which
+        multiple file paths can be specified, separated by ``^^^`` tags.
+
+        See the ``_dynamic_files.jinja2`` file in the templates
+        directory for an example of this.
+
+        :param basedir: The root directory where any files should be
+            installed.
+        :param txt: The text of the dynamic files pack.
+        :param policies: The list of per-file install policies.
+
+        :returns: The names of the files that were effectively installed.
         """
         MARKER = "^^^ "
         lines = txt.split("\n")
@@ -84,7 +144,7 @@ class Generator(object):
                     f.close()
                 filename = line.replace(MARKER, "")
                 path = os.path.join(basedir, filename)
-                ignore = not must_install_file(filename, path, policies)
+                ignore = not _must_install_file(filename, path, policies)
                 if not ignore:
                     os.makedirs(os.path.dirname(path), exist_ok=True)
                     f = open(path, "w")
@@ -104,11 +164,21 @@ class Generator(object):
         return tgts
 
     def get_template_name(self, pathname: str) -> str:
-        """Helper function to get the user-visible name of a template file from its complete pathname in the template directory.
+        """Gets the user-visible name of a template file.
 
-        For example, if the pathname is
-        "/tools/template/src/ontology/run.sh.jinja2", this will return
-        "src/ontology/run.sh".
+        For example, if the pathname is::
+
+          /tools/template/src/ontology/run.sh.jinja2
+
+        this will return (assuming ``/tools/template`` is the template
+        directory)::
+
+          src/ontology/run.sh
+
+        :param pathname: The full pathname of a template file.
+
+        :returns: The pathname of the template file, relative to the
+            template directory and without any template suffix.
         """
         name = pathname.replace(self.templatedir.as_posix(), "")
         if len(name) > 0 and name[0] == "/":
@@ -117,9 +187,15 @@ class Generator(object):
             name = name.replace(TEMPLATE_SUFFIX, "")
         return name
 
-    def install_template_files(self, targetdir: str, policies: PolicyList):
-        """
-        Installs all template-derived files into a target directory.
+    def install_template_files(self, targetdir: str, policies: PolicyList) -> List[str]:
+        """Installs all template-derived files into a directory.
+
+        :param targetdir: The base directory where all files should be
+            installed.
+        :param policies: The list of per-file install policies. See the
+            documentation of the ``_must_install_file`` function.
+
+        :returns: The names of the files that were effectively installed.
         """
         tgts = []
         for root, subdirs, files in os.walk(self.templatedir):
@@ -130,7 +206,7 @@ class Generator(object):
             for f in [f for f in files if not f.endswith(TEMPLATE_SUFFIX)]:
                 srcf = os.path.join(root, f)
                 tgtf = os.path.join(tdir, f)
-                if must_install_file(self.get_template_name(srcf), tgtf, policies):
+                if _must_install_file(self.get_template_name(srcf), tgtf, policies):
                     logging.info("  Copying: {} -> {}".format(srcf, tgtf))
                     # copy file directly, no template expansions
                     copy(srcf, tgtf)
@@ -144,7 +220,7 @@ class Generator(object):
                 if f.startswith("_dynamic"):
                     logging.info("  Unpacking: {}".format(derived_file))
                     tgts += self.unpack_files(tdir, self.generate(srcf), policies)
-                elif must_install_file(
+                elif _must_install_file(
                     self.get_template_name(srcf), derived_file, policies
                 ):
                     logging.info("  Compiling: {} -> {}".format(srcf, derived_file))
@@ -155,9 +231,14 @@ class Generator(object):
         return tgts
 
     def update_gitignore(self, template_file: str, target_file: str) -> None:
-        """
-        Update a potentially existing .gitignore file while preserving
-        its non-ODK-managed contents.
+        """Updates a potentially existing .gitignore file.
+
+        This method will update a ``.gitignore`` file to ensure it
+        contains all the ODK-mandated entries, while preserving any
+        non-ODK-managed contents.
+
+        :param template_file: Path to the .gitignore template.
+        :param target_file: Path to the file to update.
         """
         if not os.path.exists(template_file):
             # Should not happen as we should always have a .gitignore
@@ -186,9 +267,15 @@ class Generator(object):
                 f.write(line + "\n")
 
     def update_xml_catalog(self, template_file: str, target_file: str) -> None:
-        """
-        Updates a potentially existing XML catalog file while preserving
-        its non-ODK-managed contents.
+        """Updates a potentially existing XML catalog file.
+
+        This method will update a XML catalog file to ensure it contains
+        all entries required by ODK workflows (e.g., redirections for
+        all import modules described in the project configuration) while
+        preserving any non-ODK-managed contents.
+
+        :param template_file: Path to the XML catalog template.
+        :param target_file: Path to the file to update.
         """
         if not os.path.exists(template_file):
             return
@@ -250,18 +337,22 @@ class Generator(object):
         new_catalog.write(target_file, encoding="UTF-8", xml_declaration=True)
 
     def update_import_declarations(
-        self, project: OntologyProject, pluginsdir: str = "/tools/robot-plugins"
+        self, pluginsdir: str = "/tools/robot-plugins"
     ) -> None:
+        """Updates import declarations within the project's edit file.
+
+        This method will update the project's -edit file to ensure it
+        contains import declarations for all the import modules,
+        components, and pattern-derived files declared in the project
+        configuration.
+
+        :param pluginsdir: Path to the ROBOT plugins directory.
         """
-        Updates the project's -edit file to ensure it contains import
-        declarations for all the import modules, components, and
-        pattern-derived files declared in the ODK configuration.
-        """
-        base = project.uribase + "/"
-        if project.uribase_suffix is not None:
-            base += project.uribase_suffix
+        base = self.project.uribase + "/"
+        if self.project.uribase_suffix is not None:
+            base += self.project.uribase_suffix
         else:
-            base += project.id
+            base += self.project.id
 
         if "ROBOT_PLUGINS_DIRECTORY" not in os.environ:
             os.environ["ROBOT_PLUGINS_DIRECTORY"] = pluginsdir
@@ -272,55 +363,23 @@ class Generator(object):
         else:
             os.environ["ROBOT_JAVA_ARGS"] = ignore_missing_imports
 
-        cmd = f"robot odk:import -i {project.id}-edit.{project.edit_format} --exclusive true"
-        if project.import_group is not None:
-            if project.import_group.use_base_merging:
+        cmd = f"robot odk:import -i {self.project.id}-edit.{self.project.edit_format} --exclusive true"
+        if self.project.import_group is not None:
+            if self.project.import_group.use_base_merging:
                 cmd += f" --add {base}/imports/merged_import.owl"
             else:
-                for product in project.import_group.products:
+                for product in self.project.import_group.products:
                     cmd += f" --add {base}/imports/{product.id}_import.owl"
-        if project.components is not None:
-            for component in project.components.products:
+        if self.project.components is not None:
+            for component in self.project.components.products:
                 cmd += f" --add {base}/components/{component.filename}"
-        if project.use_dosdps:
+        if self.project.use_dosdps:
             cmd += f" --add {base}/patterns/definitions.owl"
-            if project.import_pattern_ontology:
+            if self.project.import_pattern_ontology:
                 cmd += f" --add {base}/patterns/pattern.owl"
 
-        if project.edit_format == "owl":
-            cmd += f" convert -f ofn -o {project.id}-edit.owl"
+        if self.project.edit_format == "owl":
+            cmd += f" convert -f ofn -o {self.project.id}-edit.owl"
         else:
-            cmd += f" convert --check false -o {project.id}-edit.obo"
+            cmd += f" convert --check false -o {self.project.id}-edit.obo"
         runcmd(cmd)
-
-
-def must_install_file(templatefile: str, targetfile: str, policies: PolicyList) -> bool:
-    """
-    Given a template filename, indicate whether the file should be
-    installed according to any per-file policy.
-
-    policies is a list of (PATTERN,POLICY) tuples where PATTERN is
-    a shell-like globbing pattern and POLICY is the update policy
-    that should be applied to any template whose pathname matches
-    the pattern.
-
-    Patterns are tested in the order they are found in the list,
-    and the first match takes precedence over any subsequent match.
-    If there is no match, the default policy is IF_MISSING.
-
-    Valid policies are:
-    * IF_MISSING: install the file if it does not already exist
-    * ALWAYS: always install the file, overwrite any existing file
-    * NEVER: never install the file
-    """
-    policy = InstallPolicy.IF_MISSING
-    for pattern, pattern_policy in policies:
-        if fnmatch.fnmatch(templatefile, pattern):
-            policy = pattern_policy
-            break
-    if policy == InstallPolicy.ALWAYS:
-        return True
-    elif policy == InstallPolicy.NEVER:
-        return False
-    else:
-        return not os.path.exists(targetfile)
