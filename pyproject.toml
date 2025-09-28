@@ -47,3 +47,13 @@ dev = [
     "types-PyYAML",
     "types-defusedxml",
 ]
+
+[project.optional-dependencies]
+workflows = [
+    "babelon",
+    "dosdp",
+    "lightrdf",
+    "semsql",
+    "sssom",
+    "tsvalid",
+]
