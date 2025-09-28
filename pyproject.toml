@@ -31,6 +31,7 @@ Repository = "https://github.com/gouttegd/odkcore"
 
 [project.scripts]
 odk = "incatools.odk.cli:main"
+odk-helper = "incatools.odk.helper:main"
 
 [build-system]
 requires = ["uv_build"]

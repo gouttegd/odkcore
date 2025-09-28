@@ -58,6 +58,7 @@ UPDATEREPODIR=              target
 SPARQLDIR =                 ../sparql
 EXTENDED_PREFIX_MAP=        $(TMPDIR)/obo.epm.json
 COMPONENTSDIR =             components
+ODK_RESOURCES_DIR ?=        /tools/resources
 {%- if project.robot.report.custom_profile %}
 ROBOT_PROFILE =             profile.txt
 {%- endif %}
@@ -172,7 +173,7 @@ reason_test: $(EDIT_PREPROCESSED)
 .PHONY: odkversion
 odkversion:
 	@echo "ODK Makefile $(ODK_VERSION_MAKEFILE)"
-	@odk-info --tools
+	@odk-helper info --tools
 
 {%- if project.config_hash %}
 .PHONY: config_check
@@ -204,7 +205,7 @@ extra_robot_plugins: {% for plugin in project.robot.plugins %} $(ROBOT_PLUGINS_D
 
 # Install all ROBOT plugins to the runtime plugins directory
 .PHONY: all_robot_plugins
-all_robot_plugins: $(foreach plugin,$(notdir $(wildcard /tools/robot-plugins/*.jar)),$(ROBOT_PLUGINS_DIRECTORY)/$(plugin)) \
+all_robot_plugins: $(foreach plugin,$(notdir $(wildcard $(ODK_RESOURCES_DIR)/robot/plugins/*.jar)),$(ROBOT_PLUGINS_DIRECTORY)/$(plugin)) \
 		   $(foreach plugin,$(notdir $(wildcard ../../plugins/*.jar)),$(ROBOT_PLUGINS_DIRECTORY)/$(plugin)) \
 		   custom_robot_plugins {% if project.robot.plugins is not none %}extra_robot_plugins {% endif %} \
 
@@ -213,8 +214,8 @@ $(ROBOT_PLUGINS_DIRECTORY)/%.jar:
 	@mkdir -p $(ROBOT_PLUGINS_DIRECTORY)
 	@if [ -f ../../plugins/$*.jar ]; then        \
 		ln ../../plugins/$*.jar $@ ;         \
-	elif [ -f /tools/robot-plugins/$*.jar ]; then \
-		cp /tools/robot-plugins/$*.jar $@ ;  \
+	elif [ -f $(ODK_RESOURCES_DIR)/robot/plugins/$*.jar ]; then \
+		cp $(ODK_RESOURCES_DIR)/robot/plugins/$*.jar $@ ;  \
 	fi
 
 # Specific rules for supplementary plugins defined in configuration
@@ -389,12 +390,7 @@ $(REPORTDIR)/%-align-report.tsv: % | $(REPORTDIR) all_robot_plugins
 
 check_for_robot_updates:
 {%- if project.robot.report.custom_profile %}
-	@cut -f2 "/tools/templates/src/ontology/profile.txt" | sort > $(TMPDIR)/sorted_tsv2.txt
-	@cut -f2 "$(ROBOT_PROFILE)" | sort > $(TMPDIR)/sorted_tsv1.txt
-	@comm -23 $(TMPDIR)/sorted_tsv2.txt $(TMPDIR)/sorted_tsv1.txt > $(TMPDIR)/missing.txt
-	@echo "Missing tests:"
-	@cat $(TMPDIR)/missing.txt
-	@rm $(TMPDIR)/sorted_tsv1.txt $(TMPDIR)/sorted_tsv2.txt $(TMPDIR)/missing.txt $(TMPDIR)/report_profile_robot.txt
+	@odk-helper check-robot-profile
 {%- else %}
 	echo "You are not using a custom profile, so you are getting the joy of the latest ROBOT report!"
 {% endif %}
@@ -435,7 +431,7 @@ show_assets:
 	du -sh $(ASSETS)
 
 check_rdfxml_%: %
-	@check-rdfxml {% if project.extra_rdfxml_checks %}--jena --rdflib{% endif %} $<
+	@odk-helper check-rdfxml {% if project.extra_rdfxml_checks %}--jena --rdflib {% endif %}$<
 
 .PHONY: check_rdfxml_assets
 check_rdfxml_assets: $(foreach product,$(MAIN_PRODUCTS),check_rdfxml_$(product).owl)
@@ -1334,7 +1330,7 @@ $(TRANSLATIONSDIR)/%.babelon.json: $(TRANSLATIONSDIR)/%.babelon.tsv
 {% if 'db' in project.export_formats -%}
 {% if project.use_context -%}
 $(CONTEXT_FILE_CSV): $(CONTEXT_FILE) | $(TMPDIR)
-	context2csv < $< > $@
+	@odk-helper context2csv $< > $@
 {% endif -%}
 
 %.db: %.owl{% if project.use_context %} $(CONTEXT_FILE_CSV){% endif %}
@@ -1594,7 +1590,7 @@ validate-all-tsv: $(ALL_TSV_FILES)
 # can use to pull the (currently inofficial) OBO EPM into the workspace.
 # Users are instructed to refer to the EPM only through the variable $(EXTENDED_PREFIX_MAP) as 
 # its location might change in a feature version of ODK.
-$(EXTENDED_PREFIX_MAP): /tools/obo.epm.json
+$(EXTENDED_PREFIX_MAP): $(ODK_RESOURCES_DIR)/obo.epm.json
 	cp $< $@
 
 {% if 'obo' in project.edit_format -%}

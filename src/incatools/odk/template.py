@@ -23,6 +23,7 @@ from .util import runcmd
 
 TEMPLATE_SUFFIX = ".jinja2"
 DEFAULT_TEMPLATE_DIR = Path(__file__).parent.resolve() / "templates"
+RESOURCES_DIR = Path(os.environ.get("ODK_RESOURCES_DIR", "/tools/resources"))
 
 
 class InstallPolicy(Enum):
@@ -336,17 +337,13 @@ class Generator(object):
         ElementTree.indent(new_catalog, space="  ", level=0)
         new_catalog.write(target_file, encoding="UTF-8", xml_declaration=True)
 
-    def update_import_declarations(
-        self, pluginsdir: str = "/tools/robot-plugins"
-    ) -> None:
+    def update_import_declarations(self) -> None:
         """Updates import declarations within the project's edit file.
 
         This method will update the project's -edit file to ensure it
         contains import declarations for all the import modules,
         components, and pattern-derived files declared in the project
         configuration.
-
-        :param pluginsdir: Path to the ROBOT plugins directory.
         """
         base = self.project.uribase + "/"
         if self.project.uribase_suffix is not None:
@@ -355,7 +352,8 @@ class Generator(object):
             base += self.project.id
 
         if "ROBOT_PLUGINS_DIRECTORY" not in os.environ:
-            os.environ["ROBOT_PLUGINS_DIRECTORY"] = pluginsdir
+            plugins_dir = RESOURCES_DIR / "robot/plugins"
+            os.environ["ROBOT_PLUGINS_DIRECTORY"] = plugins_dir.as_posix()
 
         ignore_missing_imports = "-Dorg.semantic.web.owlapi.model.parameters.ConfigurationOptions.MISSING_IMPORT_HANDLING_STRATEGY=SILENT"
         if "ROBOT_JAVA_ARGS" in os.environ:
