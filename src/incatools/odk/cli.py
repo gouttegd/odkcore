@@ -9,6 +9,7 @@ import glob
 import logging
 import os
 import shutil
+import sys
 from shutil import copy
 
 import click
@@ -25,43 +26,67 @@ def main():
 
 
 @main.command()
-@click.option("-C", "--config", type=click.Path(exists=True))
-@click.option("-T", "--templatedir", default=DEFAULT_TEMPLATE_DIR)
-@click.option("-i", "--input", type=click.Path(exists=True))
-@click.option("-o", "--output")
-def create_makefile(config, templatedir, input, output):
-    """
-    For testing purposes
+@click.option(
+    "-C",
+    "--config",
+    type=click.Path(exists=True),
+    default="config.yaml",
+    help="The ODK configuration file (default: config.yaml).",
+)
+@click.option(
+    "-T",
+    "--templatedir",
+    default=DEFAULT_TEMPLATE_DIR,
+    type=click.Path(file_okay=False, dir_okay=True, exists=True),
+    help="The directory containing the templates.",
+)
+@click.option(
+    "-n",
+    "--name",
+    default="src/ontology/Makefile",
+    metavar="TEMPLATE",
+    help="The file to generate (default: src/ontology/Makefile).",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.File("w"),
+    default=sys.stdout,
+    help="Write to the specified file. Default is to write to standard output.",
+)
+def generate_file(config, templatedir, name, output):
+    """Generates a single template-derived file.
+
+    This is for testing purposes only.
     """
     try:
-        mg = Generator(load_config(config))
+        mg = Generator(load_config(config), templatedir)
     except ConfigurationError as ce:
         raise click.ClickException(ce)
-    print(mg.generate("{}/src/ontology/Makefile.jinja2".format(templatedir)))
+    output.write(mg.generate_from_name(name))
 
 
 @main.command()
-@click.option("-C", "--config", type=click.Path(exists=True))
-@click.option("-T", "--templatedir", default=DEFAULT_TEMPLATE_DIR)
-@click.option("-i", "--input", type=click.Path(exists=True))
-@click.option("-o", "--output")
-def create_dynfile(config, templatedir, input, output):
-    """
-    For testing purposes
-    """
-    try:
-        mg = Generator(load_config(config))
-    except ConfigurationError as ce:
-        raise click.ClickException(ce)
-    print(mg.generate("{}/_dynamic_files.jinja2".format(templatedir)))
-
-
-@main.command()
-@click.option("-C", "--config", type=click.Path(exists=True))
-@click.option("-o", "--output", required=True)
+@click.option(
+    "-C",
+    "--config",
+    type=click.Path(exists=True),
+    default="config.yaml",
+    help="The ODK configuration file (default: config.yaml).",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.File("w"),
+    default=sys.stdout,
+    help="Write to the specified file. Default is to write to standard output.",
+)
 def export_project(config, output):
-    """
-    For testing purposes
+    """Exports the full configuration for a project.
+
+    This creates a configuration file containing all settings for the
+    project (including settings with default values). This is for
+    testing purposes only.
     """
     try:
         mg = Generator(load_config(config))
@@ -71,27 +96,37 @@ def export_project(config, output):
 
 
 @main.command()
-@click.option("-C", "--config", type=click.Path(exists=True))
-@click.option("-o", "--output", required=True)
+@click.option(
+    "-C",
+    "--config",
+    type=click.Path(exists=True),
+    default="config.yaml",
+    help="The ODK configuration file (default: config.yaml).",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.File("w"),
+    default=sys.stdout,
+    help="Write to the specified file. Default is to write to standard output.",
+)
 def update_config(config, output):
-    """
-    Updates a configuration file to account for renamed or moved options.
-    """
+    """Updates a configuration file to account for renamed or moved options."""
     try:
         cfg = load_config_dict(config)[0]
     except ConfigurationError as ce:
         raise click.ClickException(ce)
-    with open(output, "w") as f:
-        f.write(yaml.dump(cfg, default_flow_style=False))
+    output.write(yaml.dump(cfg, default_flow_style=False))
 
 
 @main.command()
 @click.option("-T", "--templatedir", default=DEFAULT_TEMPLATE_DIR)
 def update(templatedir):
-    """
-    Updates a pre-existing repository. This command is expected to be
-    run from within the src/ontology directory (the directory
-    containing the configuration file).
+    """Updates a pre-existing repository.
+
+    This command is expected to be run from within the
+    ``src/ontology directory`` of an existing ODK repository (the
+    directory containing the configuration file).
     """
     config_matches = list(glob.glob("*-odk.yaml"))
     if len(config_matches) == 0:
@@ -170,33 +205,62 @@ def update(templatedir):
     "-C",
     "--config",
     type=click.Path(exists=True),
-    help="""
-              path to a YAML configuration.
-              See examples folder for examples.
-              This is optional, configuration can also be passed
-              by command line, but an explicit config file is preferred.
-              """,
+    help="""The ODK configuration file.
+            This is optional, configuration options can also be passed
+            on the command line, but an explicit configuration file is
+            prefered.""",
 )
-@click.option("-c", "--clean/--no-clean", default=False)
+@click.option(
+    "-c",
+    "--clean/--no-clean",
+    default=False,
+    help="Cleans the target directory prior to seeding.",
+)
 @click.option("-T", "--templatedir", default=DEFAULT_TEMPLATE_DIR)
-@click.option("-D", "--outdir", default=None)
-@click.option("-d", "--dependencies", multiple=True)
-@click.option("-t", "--title", type=str)
-@click.option("-u", "--user", type=str)
+@click.option(
+    "-D",
+    "--outdir",
+    default=None,
+    metavar="DIR",
+    help="The target directory. The default is target/ID, where ID is the handle of the new ontology.",
+)
+@click.option(
+    "-d",
+    "--dependencies",
+    multiple=True,
+    metavar="ID",
+    help="Adds the specified ontology as an import.",
+)
+@click.option("-t", "--title", type=str, help="The title of the new ontology.")
+@click.option("-u", "--user", type=str, help="The name of the repository owner.")
 @click.option(
     "-s",
     "--source",
-    type=str,
-    help="""
-              path to existing source for ontology edit file. 
-              Optional. If not passed, a stub ontology will be created.
-              """,
+    type=click.Path(exists=True),
+    help="""Path to an existing source for the ontology edit file.
+            If not specified, a stub ontology will be created.""",
 )
 @click.option("-v", "--verbose", count=True)
-@click.option("-g", "--skipgit", default=False, is_flag=True)
-@click.option("-n", "--gitname", default=None)
-@click.option("-e", "--gitemail", default=None)
-@click.option("-r", "--commit-artefacts", default=False, is_flag=True)
+@click.option(
+    "-g",
+    "--skipgit",
+    default=False,
+    is_flag=True,
+    help="Skip building and committing the initial release.",
+)
+@click.option(
+    "-n", "--gitname", default=None, help="Git user name for the initial commit."
+)
+@click.option(
+    "-e", "--gitemail", default=None, help="Git email for the initial commit."
+)
+@click.option(
+    "-r",
+    "--commit-artefacts",
+    default=False,
+    is_flag=True,
+    help="Commits release artefacts into the repository.",
+)
 @click.argument("repo", nargs=-1)
 def seed(
     config,
@@ -214,9 +278,7 @@ def seed(
     gitemail,
     commit_artefacts,
 ):
-    """
-    Seeds an ontology project
-    """
+    """Seeds an ontology project."""
     tgts = []
     if len(repo) > 0:
         if len(repo) > 1:

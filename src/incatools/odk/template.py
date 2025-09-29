@@ -101,12 +101,12 @@ class Generator(object):
         else:
             self.templatedir = DEFAULT_TEMPLATE_DIR
 
-    def generate(self, input: str) -> str:
+    def generate(self, input: Path | str) -> str:
         """Renders one template file.
 
         :param input: The path to the template to instanciate.
 
-        :returns: The text of the instanciated template.
+        :returns: The text of the instantiated template.
         """
         with open(input) as file_:
             template = Template(file_.read())
@@ -116,6 +116,25 @@ class Generator(object):
                 )
             else:
                 return template.render(project=self.project)
+
+    def generate_from_name(self, name: str) -> str:
+        """Renders one template.
+
+        This method differs from ``generate`` in that it expects the
+        basename of a template file, relative to the root of the
+        template directory and without any suffix. Basically, this is
+        the name of the file as it would appear to an external user with
+        no knowledge of how the templating system works (e.g.
+        ``src/ontology/Makefile``).
+
+        :param name: The name of the template to generate.
+
+        :returns: The text of the instantiated template.
+        """
+        template_file = self.templatedir / (name + TEMPLATE_SUFFIX)
+        if not template_file.exists():
+            raise FileNotFoundError(f"No {name} template found")
+        return self.generate(template_file)
 
     def unpack_files(self, basedir: str, txt: str, policies: PolicyList) -> List[str]:
         """Unpack all files found in a dynamic files pack.

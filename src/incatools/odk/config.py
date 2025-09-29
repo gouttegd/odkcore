@@ -7,7 +7,7 @@
 
 import logging
 from hashlib import sha256
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 import yaml
 from dacite import from_dict
@@ -283,11 +283,10 @@ def put_key(obj: Dict[str, Any], path: str, value: Any) -> None:
             obj[component] = value
 
 
-def save_config(project: OntologyProject, path: str) -> None:
+def save_config(project: OntologyProject, output: TextIO) -> None:
     """Saves an ontology project to a file in YAML format.
 
     :param project: The project to save.
-    :param path: The pathname where to save the project.
+    :param output: The file-like object where to save the project.
     """
-    with open(path, "w") as f:
-        f.write(yaml.dump(project.to_dict(), default_flow_style=False))
+    output.write(yaml.dump(project.to_dict(), default_flow_style=False))
