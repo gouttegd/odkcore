@@ -46,6 +46,7 @@ dev = [
     "mypy",
     "types-PyYAML",
     "types-defusedxml",
+    "types-requests",
 ]
 
 [project.optional-dependencies]

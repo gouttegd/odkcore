@@ -10,12 +10,14 @@ import logging
 import os
 import shutil
 import sys
+from pathlib import Path
 from shutil import copy
 
 import click
 import yaml
 
 from .config import ConfigurationError, load_config, load_config_dict, save_config
+from .setup import ODKEnvironment
 from .template import DEFAULT_TEMPLATE_DIR, Generator, InstallPolicy
 from .util import runcmd
 
@@ -406,6 +408,22 @@ def seed(
         print(
             "Repository files have been successfully copied, but no git commands have been run."
         )
+
+
+@main.command()
+@click.argument(
+    "target", type=click.Path(dir_okay=True, file_okay=False, path_type=Path)
+)
+@click.option(
+    "--force",
+    default=False,
+    is_flag=True,
+    help="Install all tools even if they are already available.",
+)
+def install(target: Path, force: bool) -> None:
+    """Installs a ODK environment."""
+    odkenv = ODKEnvironment(target)
+    odkenv.install(force)
 
 
 if __name__ == "__main__":
