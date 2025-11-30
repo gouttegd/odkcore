@@ -46,6 +46,25 @@ class File(object):
         """
         pass
 
+    def is_available(self, target: ODKEnvironment) -> bool:
+        """Checks whether the file is already available.
+
+        :param target: The environment to check for availability of the file.
+        """
+        return self.get_final_location(target).exists()
+
+    def get_final_location(self, target: ODKEnvironment) -> Path:
+        """Gets the location of the file once installed.
+
+        This should be overriden in subclasses so that each different
+        type of files gets its own location right.
+
+        :param target: The environment in which to install the file.
+
+        :returns: The final location of the file.
+        """
+        return target.root / self.name
+
 
 class DownloadableFile(File):
     """A file that must be installed from an online source."""
@@ -75,25 +94,19 @@ class DownloadableFile(File):
             for chunk in r.iter_content(chunk_size=None):
                 f.write(chunk)
 
-    def get_final_location(self, target: ODKEnvironment) -> Path:
-        """Gets the location of the file once installed.
-
-        This should be overriden in subclasses so that each different
-        type of file gets its own location right.
-
-        :param target: The environment in which to install the file.
-
-        :returns: The final location of the file.
-        """
-        return target.root / self.name
-
 
 class Tool(DownloadableFile):
     """A file that is an executable tool."""
 
-    def is_available(self) -> bool:
-        """Checks whether the tool is present in the current environment."""
-        return which(self.name) is not None
+    def is_available(self, target: ODKEnvironment) -> bool:
+        if not self.get_final_location(target).exists():
+            # Even if the tool is not in the environment, it is enough
+            # for it to be reachable in the PATH
+            return which(self.name) is not None
+        return True
+
+    def get_final_location(self, target: ODKEnvironment) -> Path:
+        return target.bindir / self.name
 
 
 class SimpleJavaTool(Tool):
@@ -102,7 +115,7 @@ class SimpleJavaTool(Tool):
     def install(self, target: ODKEnvironment) -> None:
         jar = target.toolsdir / (self.name + ".jar")
         self.download(jar)
-        launcher = target.bindir / self.name
+        launcher = self.get_final_location(target)
         with launcher.open("w") as f:
             f.write("#!/bin/sh/\n")
             f.write(f'exec java -jar {jar.absolute()} "$@"\n')
@@ -141,7 +154,7 @@ class MultiJarJavaTool(SimpleJavaTool):
         archive.unlink()
 
         classpath = ":".join([str(libdir.absolute() / path) for path in jars])
-        launcher = target.bindir / self.name
+        launcher = self.get_final_location(target)
         with launcher.open("w") as f:
             f.write("#!/bin/sh\n")
             f.write(f'exec java -cp {classpath} {self.main_class} "$@"\n')
@@ -174,13 +187,16 @@ class ActivationFile(File):
         File.__init__(self, "activate-odk-environment.sh")
 
     def install(self, target: ODKEnvironment) -> None:
-        env_file = target.bindir / self.name
+        env_file = self.get_final_location(target)
         with env_file.open("w") as f:
             f.write("#!/bin/sh\n")
             f.write(f"PATH={target.bindir.absolute()}:$PATH\n")
             f.write(f"ODK_RESOURCES_DIR={target.resourcesdir.absolute()}\n")
             f.write("export PATH\n")
             f.write("export ODK_RESOURCES_DIR\n")
+
+    def get_final_location(self, target: ODKEnvironment) -> Path:
+        return target.bindir / self.name
 
 
 class ODKEnvironment(object):
@@ -197,7 +213,6 @@ class ODKEnvironment(object):
     pluginsdir: Path
     system: str
     machine: str
-    tools: list[Tool]
     files: list[File]
 
     def __init__(self, target: Union[Path, str]):
@@ -215,7 +230,7 @@ class ODKEnvironment(object):
         self.pluginsdir = self.resourcesdir / "robot/plugins"
         self.system = platform.system()
         self.machine = platform.machine()
-        self.tools = [
+        self.files = [
             SimpleJavaTool("robot", ROBOT_SOURCE),
             SimpleJavaTool("dicer-cli", DICER_SOURCE),
             SimpleJavaTool("sssom-cli", SSSOM_SOURCE),
@@ -225,8 +240,6 @@ class ODKEnvironment(object):
             MultiJarJavaTool(
                 "relation-graph", RELGR_SOURCE, "org.renci.relationgraph.Main"
             ),
-        ]
-        self.files = [
             RobotPlugin("odk", ODK_PLUGIN_SOURCE),
             RobotPlugin("sssom", SSSOM_PLUGIN_SOURCE),
             ResourceFile("obo.epm.json", OBO_EPM_SOURCE),
@@ -241,18 +254,14 @@ class ODKEnvironment(object):
         (excluding Python packages, which are supposed to be already
         available).
 
-        :param force: If true, tools are installed in the environment
-            even if they are already available in the current PATH.
+        :param force: If true, files are installed in the environment
+            even if they are already available.
         """
         self.bindir.mkdir(parents=True, exist_ok=True)
         self.toolsdir.mkdir(parents=True, exist_ok=True)
         self.pluginsdir.mkdir(parents=True, exist_ok=True)
 
-        for tool in self.tools:
-            if not tool.is_available() or force:
-                logging.info(f"Installing {tool.name}...")
-                tool.install(self)
-
         for file in self.files:
-            logging.info(f"Installing {file.name}...")
-            file.install(self)
+            if not file.is_available(self) or force:
+                logging.info(f"Installing {file.name}...")
+                file.install(self)

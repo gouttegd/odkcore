@@ -418,7 +418,7 @@ def seed(
     "--force",
     default=False,
     is_flag=True,
-    help="Install all tools even if they are already available.",
+    help="Install all files even if they are already available.",
 )
 def install(target: Path, force: bool) -> None:
     """Installs a ODK environment."""
