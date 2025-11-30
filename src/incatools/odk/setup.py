@@ -13,7 +13,8 @@ import tarfile
 from os.path import basename
 from pathlib import Path
 from shutil import which
-from typing import Union
+from typing import Optional, Union
+from zipfile import ZipFile
 
 import requests
 
@@ -83,12 +84,16 @@ class DownloadableFile(File):
     def install(self, target: ODKEnvironment) -> None:
         self.download(self.get_final_location(target))
 
-    def download(self, target: Path) -> None:
+    def download(self, target: Path, source: Optional[str] = None) -> None:
         """Downloads the file from its remote location.
 
         :param target: Where the downloaded file should be written.
+        :param source: Where to download the file from (defaults to
+            the source argument given to the constructor).
         """
-        r = requests.get(self.source, stream=True)
+        if source is None:
+            source = self.source
+        r = requests.get(source, stream=True)
         r.raise_for_status()
         with target.open("wb") as f:
             for chunk in r.iter_content(chunk_size=None):
@@ -159,6 +164,98 @@ class MultiJarJavaTool(SimpleJavaTool):
             f.write("#!/bin/sh\n")
             f.write(f'exec java -cp {classpath} {self.main_class} "$@"\n')
         launcher.chmod(0o755)
+
+
+class SqliteTool(Tool):
+    """The sqlite3 tool."""
+
+    version: str
+
+    def __init__(self, version: str):
+        Tool.__init__(self, "sqlite3", "https://sqlite.org/2025/")
+        self.version = self._get_encoded_version(version)
+
+    def install(self, target: ODKEnvironment) -> None:
+        if target.system == "Linux" and target.machine == "x86_64":
+            qualifier = "linux-x64"
+        elif target.system == "Darwin" and target.machine == "x86_64":
+            qualifier = "osx-x64"
+        elif target.system == "Darwin" and target.machine == "arm64":
+            qualifier = "osx-arm64"
+        else:
+            raise Exception(
+                f"Unsupported system/machine {target.system}/{target.machine}"
+            )
+
+        archive_name = f"sqlite-tools-{qualifier}-{self.version}.zip"
+        archive = target.root / archive_name
+        self.download(archive, source=self.source + archive_name)
+
+        with ZipFile(archive, "r") as f:
+            f.extract("sqlite3", target.bindir)
+        archive.unlink()
+        self.get_final_location(target).chmod(0o755)
+
+    def _get_encoded_version(self, version: str) -> str:
+        parts = version.split(".")
+        encoded = parts[0]
+        for p in parts[1:]:
+            n = int(p)
+            encoded += f"{n:02d}"
+        if len(parts) < 4:
+            encoded += "00"
+        return encoded
+
+
+class GithubTool(Tool):
+    """The Github CLI tool."""
+
+    version: str
+
+    def __init__(self, version: str):
+        Tool.__init__(
+            self, "gh", f"https://github.com/cli/cli/releases/download/v{version}/"
+        )
+        self.version = version
+
+    def install(self, target: ODKEnvironment) -> None:
+        if target.system == "Linux" and target.machine == "x86_64":
+            qualifier = "linux_amd64"
+            is_zip = False
+        elif target.system == "Darwin" and target.machine == "x86_64":
+            qualifier = "macOS_amd64"
+            is_zip = True
+        elif target.system == "Darwin" and target.machine == "arm64":
+            qualifier = "macOS_arm64"
+            is_zip = True
+        else:
+            raise Exception(
+                f"Unsupported system/machine {target.system}/{target.machine}"
+            )
+
+        basename = f"gh_{self.version}_{qualifier}"
+        if is_zip:
+            archive_name = basename + ".zip"
+        else:
+            archive_name = basename + ".tar.gz"
+        archive = target.root / archive_name
+        self.download(archive, source=self.source + archive_name)
+
+        srcfile = f"{basename}/bin/gh"
+        dstfile = self.get_final_location(target)
+
+        if is_zip:
+            with ZipFile(archive, "r") as f:
+                with dstfile.open("wb") as dst:
+                    dst.write(f.read(srcfile))
+        else:
+            with tarfile.open(archive) as f:
+                for member in f.getmembers():
+                    if member.name == srcfile:
+                        member.name = "gh"
+                        f.extract(member, path=target.bindir)
+
+        dstfile.chmod(0o755)
 
 
 class RobotPlugin(DownloadableFile):
@@ -240,6 +337,8 @@ class ODKEnvironment(object):
             MultiJarJavaTool(
                 "relation-graph", RELGR_SOURCE, "org.renci.relationgraph.Main"
             ),
+            SqliteTool("3.51.1"),
+            GithubTool("2.83.1"),
             RobotPlugin("odk", ODK_PLUGIN_SOURCE),
             RobotPlugin("sssom", SSSOM_PLUGIN_SOURCE),
             ResourceFile("obo.epm.json", OBO_EPM_SOURCE),
