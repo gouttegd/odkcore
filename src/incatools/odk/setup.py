@@ -122,8 +122,8 @@ class SimpleJavaTool(Tool):
         self.download(jar)
         launcher = self.get_final_location(target)
         with launcher.open("w") as f:
-            f.write("#!/bin/sh/\n")
-            f.write(f'exec java -jar {jar.absolute()} "$@"\n')
+            f.write("#!/bin/sh\n")
+            f.write(f'exec java -jar "{jar.absolute()}" "$@"\n')
         launcher.chmod(0o755)
 
 
@@ -162,7 +162,7 @@ class MultiJarJavaTool(SimpleJavaTool):
         launcher = self.get_final_location(target)
         with launcher.open("w") as f:
             f.write("#!/bin/sh\n")
-            f.write(f'exec java -cp {classpath} {self.main_class} "$@"\n')
+            f.write(f'exec java -cp "{classpath}" {self.main_class} "$@"\n')
         launcher.chmod(0o755)
 
 
@@ -287,7 +287,7 @@ class ActivationFile(File):
         env_file = self.get_final_location(target)
         with env_file.open("w") as f:
             f.write("#!/bin/sh\n")
-            f.write(f"PATH={target.bindir.absolute()}:$PATH\n")
+            f.write(f"PATH=\"{target.bindir.absolute()}:$PATH\"\n")
             f.write(f"ODK_RESOURCES_DIR={target.resourcesdir.absolute()}\n")
             f.write("export PATH\n")
             f.write("export ODK_RESOURCES_DIR\n")
