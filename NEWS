@@ -1,0 +1,4 @@
+Changes in odk-core 0.1.1 (2025-12-06)
+--------------------------------------
+
+  * Fix launcher scripts in generated ODK environments.

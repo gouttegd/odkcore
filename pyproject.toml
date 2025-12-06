@@ -1,6 +1,6 @@
 [project]
 name = "odk-core"
-version = "0.1.0"
+version = "0.1.1"
 description = "Ontology Development Kit Core"
 license = "BSD-3-Clause"
 authors = [
@@ -39,6 +39,9 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "incatools.odk"
+source-include = [
+    "NEWS",
+]
 
 [dependency-groups]
 dev = [
