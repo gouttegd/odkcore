@@ -182,7 +182,7 @@ def update(templatedir):
 
     # Special procedures to update some ODK-managed files that
     # may have been manually edited.
-    mg.update_gitignore(templatedir + "/.gitignire.jinja2", "../../.gitignore")
+    mg.update_gitignore(templatedir + "/.gitignore.jinja2", "../../.gitignore")
 
     if project.manage_import_declarations:
         mg.update_xml_catalog(
