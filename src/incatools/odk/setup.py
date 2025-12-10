@@ -123,7 +123,7 @@ class SimpleJavaTool(Tool):
         launcher = self.get_final_location(target)
         with launcher.open("w") as f:
             f.write("#!/bin/sh\n")
-            f.write(f'exec java -jar "{jar.absolute()}" "$@"\n')
+            f.write(f'exec java $JAVA_OPTS -jar "{jar.absolute()}" "$@"\n')
         launcher.chmod(0o755)
 
 
@@ -162,7 +162,7 @@ class MultiJarJavaTool(SimpleJavaTool):
         launcher = self.get_final_location(target)
         with launcher.open("w") as f:
             f.write("#!/bin/sh\n")
-            f.write(f'exec java -cp "{classpath}" {self.main_class} "$@"\n')
+            f.write(f'exec java $JAVA_OPTS -cp "{classpath}" {self.main_class} "$@"\n')
         launcher.chmod(0o755)
 
 
