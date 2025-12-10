@@ -1,0 +1,78 @@
+# This file is heavily lifted from the "activate" script from the
+# virtualenv project.
+#
+# --------
+# Copyright (c) 2020-202x The virtualenv developers
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# --------
+
+deactivate() {
+    if ! [ -z "${_OLD_VIRTUAL_PATH:+_}" ]; then
+        PATH="$_OLD_VIRTUAL_PATH"
+        export PATH
+        unset _OLD_VIRTUAL_PATH
+    fi
+    if ! [ -z "${_OLD_VIRTUAL_PYTHONHOME+_}" ]; then
+        PYTHONHOME="$_OLD_VIRTUAL_PYTHONHOME"
+        export PYTHONHOME
+        unset _OLD_VIRTUAL_PYTHONHOME
+    fi
+    if ! [ -z "${_OLD_VIRTUAL_PS1+_}" ]; then
+        PS1="$_OLD_VIRTUAL_PS1"
+        export PS1
+        unset _OLD_VIRTUAL_PS1
+    fi
+    unset VIRTUAL_ENV
+    unset VIRTUAL_ENV_PROMPT
+    unset ODK_RESOURCES_DIR
+
+    hash -r 2>/dev/null
+
+    if [ ! "${1-}" = "nondestructive" ]; then
+        unset -f deactivate
+    fi
+}
+
+deactivate nondestructive
+
+VIRTUAL_ENV={{target_dir}}
+export VIRTUAL_ENV
+
+_OLD_VIRTUAL_PATH="$PATH"
+PATH="$VIRTUAL_ENV/bin:$PATH"
+export PATH
+
+if ! [ -x "${PYTHONHOME+_}" ]; then
+    _OLD_VIRTUAL_PYTHONHOME="$PYTHONHOME"
+    unset PYTHONHOME
+fi
+
+VIRTUAL_ENV_PROMPT=$(basename "$VIRTUAL_ENV")
+export VIRTUAL_ENV_PROMPT
+
+_OLD_VIRTUAL_PS1="${PS1-}"
+PS1="(${VIRTUAL_ENV_PROMPT}) ${PS1-}"
+export PS1
+
+ODK_RESOURCES_DIR="$VIRTUAL_ENV/resources"
+export ODK_RESOURCES_DIR
+
+hash -r 2>/dev/null || true

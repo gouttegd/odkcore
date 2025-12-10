@@ -17,6 +17,7 @@ from typing import Optional, Union
 from zipfile import ZipFile
 
 import requests
+from jinja2 import Template
 
 ROBOT_SOURCE = "https://github.com/ontodev/robot/releases/download/v1.9.8/robot.jar"
 DICER_SOURCE = "https://github.com/gouttegd/dicer/releases/download/dicer-0.2.1/dicer-cli-0.2.1.jar"
@@ -26,6 +27,8 @@ RELGR_SOURCE = "https://github.com/INCATools/relation-graph/releases/download/v2
 ODK_PLUGIN_SOURCE = "https://github.com/INCATools/odk-robot-plugin/releases/download/odk-robot-plugin-0.2.0/odk.jar"
 SSSOM_PLUGIN_SOURCE = "https://github.com/gouttegd/sssom-java/releases/download/sssom-java-1.9.0/sssom-robot-plugin-1.9.0.jar"
 OBO_EPM_SOURCE = "https://raw.githubusercontent.com/biopragmatics/bioregistry/main/exports/contexts/obo.epm.json"
+
+ACTIVATION_TEMPLATE = Path(__file__).parent.resolve() / "activate.jinja2"
 
 
 class File(object):
@@ -285,12 +288,10 @@ class ActivationFile(File):
 
     def install(self, target: ODKEnvironment) -> None:
         env_file = self.get_final_location(target)
-        with env_file.open("w") as f:
-            f.write("#!/bin/sh\n")
-            f.write(f"PATH=\"{target.bindir.absolute()}:$PATH\"\n")
-            f.write(f"ODK_RESOURCES_DIR={target.resourcesdir.absolute()}\n")
-            f.write("export PATH\n")
-            f.write("export ODK_RESOURCES_DIR\n")
+        with ACTIVATION_TEMPLATE.open("r") as fin:
+            template = Template(fin.read())
+            with env_file.open("w") as fout:
+                fout.write(template.render(target_dir=target.root.absolute()))
 
     def get_final_location(self, target: ODKEnvironment) -> Path:
         return target.bindir / self.name
