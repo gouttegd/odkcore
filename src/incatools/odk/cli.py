@@ -321,7 +321,8 @@ def seed(
 
     tgt_project_file = "{}/project.yaml".format(outdir)
     if project.export_project_yaml:
-        save_config(project, tgt_project_file)
+        with open(tgt_project_file, "w") as f:
+            save_config(project, f)
         tgts.append(tgt_project_file)
     if source is not None:
         copy(
@@ -335,7 +336,8 @@ def seed(
     if config is not None:
         copy(config, odk_config_file)
     else:
-        save_config(project, odk_config_file)
+        with open(odk_config_file, "w") as f:
+            save_config(project, f)
     logging.info("Created files:")
     for tgt in tgts:
         logging.info("  File: {}".format(tgt))
