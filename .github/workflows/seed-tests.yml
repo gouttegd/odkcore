@@ -7,12 +7,14 @@ on:
       - 'src/**'
       - 'tests/**'
       - 'pyproject.toml'
+      - '.github/workflows/seed-tests.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'src/**'
       - 'tests/**'
       - 'pyproject.toml'
+      - '.github/workflows/seed-tests.yml'
   workflow_dispatch:
 
 jobs:
