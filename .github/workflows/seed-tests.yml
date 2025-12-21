@@ -42,4 +42,4 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --all-extras
       - name: Run the tests
-        run: cd tests && sh test-config.sh
+        run: cd tests && sh test-configs.sh
