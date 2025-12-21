@@ -31,7 +31,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
       - name: Install Python dependencies
-        run: uv sync --dev
+        run: uv sync --dev --all-extras
       - name: Code linting
         run: uv run ruff check src
       - name: Code formatting
