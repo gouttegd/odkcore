@@ -40,8 +40,6 @@ deactivate() {
         export PS1
         unset _OLD_VIRTUAL_PS1
     fi
-    unset VIRTUAL_ENV
-    unset VIRTUAL_ENV_PROMPT
     unset ODK_RESOURCES_DIR
 
     hash -r 2>/dev/null
@@ -53,11 +51,8 @@ deactivate() {
 
 deactivate nondestructive
 
-VIRTUAL_ENV={{target_dir}}
-export VIRTUAL_ENV
-
 _OLD_VIRTUAL_PATH="$PATH"
-PATH="$VIRTUAL_ENV/bin:$PATH"
+PATH="{{target_dir}}/bin:$PATH"
 export PATH
 
 if ! [ -x "${PYTHONHOME+_}" ]; then
@@ -65,14 +60,12 @@ if ! [ -x "${PYTHONHOME+_}" ]; then
     unset PYTHONHOME
 fi
 
-VIRTUAL_ENV_PROMPT=$(basename "$VIRTUAL_ENV")
-export VIRTUAL_ENV_PROMPT
-
 _OLD_VIRTUAL_PS1="${PS1-}"
-PS1="(${VIRTUAL_ENV_PROMPT}) ${PS1-}"
+PS1="({{target_dir.name}}) ${PS1-}"
 export PS1
 
-ODK_RESOURCES_DIR="$VIRTUAL_ENV/resources"
+ODK_RESOURCES_DIR="{{target_dir}}/resources"
 export ODK_RESOURCES_DIR
 
 hash -r 2>/dev/null || true
+
