@@ -58,7 +58,8 @@ the PATH. The various tools used by ODK workflows are:
   (required for projects using SSSOM mappings),
 * [DOSDP-Tools](https://github.com/INCATools/dosdp-tools) (required for
   projects using DOSDP patterns),
-* [SQLite3](https://www.sqlite.org/) and
+* [SQLite3](https://www.sqlite.org/),
+  [Rdftab](https://github.com/ontodev/rdftab.rs), and
   [Relation-Graph](https://github.com/INCATools/relation-graph)
   (required for exporting release artefacts to [SemSQL
   format](https://incatools.github.io/semantic-sql/), if desired),

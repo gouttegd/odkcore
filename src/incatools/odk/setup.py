@@ -261,6 +261,35 @@ class GithubTool(Tool):
         dstfile.chmod(0o755)
 
 
+class RdftabTool(Tool):
+    """Jim Balhoff's RDFTab tool."""
+
+    def __init__(self):
+        Tool.__init__(
+            self,
+            "rdftab",
+            "https://github.com/ontodev/rdftab.rs/releases/download/v0.1.1/rdftab-",
+        )
+
+    def install(self, target: ODKEnvironment) -> None:
+        if target.system == "Linux" and target.machine == "x86_64":
+            self.source = self.source + "x86_64-unknown-linux-musl"
+        elif target.system == "Darwin" and target.machine == "x86_64":
+            self.source = self.source + "x86_64-apple-darwin"
+        elif target.system == "Darwin" and target.machine == "arm64":
+            # Jim does not provide a pre-built binary for arm64 macOS,
+            # so we use our own
+            self.source = "https://incenp.org/files/softs/rdftab/0.1/rdftab-0.1.1-aarch64-apple-darwin"
+        else:
+            raise Exception(
+                f"Unsupported system/machine {target.system}/{target.machine}"
+            )
+
+        dstfile = self.get_final_location(target)
+        self.download(dstfile)
+        dstfile.chmod(0o755)
+
+
 class RobotPlugin(DownloadableFile):
     """A file that is a plugin for ROBOT."""
 
@@ -340,6 +369,7 @@ class ODKEnvironment(object):
             ),
             SqliteTool("3.51.1"),
             GithubTool("2.83.1"),
+            RdftabTool(),
             RobotPlugin("odk", ODK_PLUGIN_SOURCE),
             RobotPlugin("sssom", SSSOM_PLUGIN_SOURCE),
             ResourceFile("obo.epm.json", OBO_EPM_SOURCE),
