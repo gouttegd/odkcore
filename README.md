@@ -1,44 +1,43 @@
 Ontology Development Kit Core
 =============================
 
-This is an _experimental_ project aiming at isolating the core features
-of the [Ontology Development
-Kit](https://github.com/INCATools/ontology-development-kit) (ODK) and
-providing them as a single Python package, independently of the ODK
-Docker images.
+This project provides the core functionality of the [Ontology
+Development Kit](https://github.com/INCATools/ontology-development-kit)
+as a standalone Python package (`odk-core`).
 
-Rationale
----------
-The “Ontology Development Kit” is currently three different things at
-once:
+Namely, it provides:
 
-* it is a set of executable workflows to manage the lifecycle of an
-  ontology;
-* it is a tool to create (“seed”, in ODK parlance) and update an
-  ontology repository that would use said workflows;
-* it is a toolbox of ontology engineering tools, provided as a Docker
-  image.
+* the `odk` script to seed and update a ODK-managed repository;
+* the template files used to seed a ODK-managed repository.
 
-This project posits that the first two things are in fact largely
-independent of the third one, and makes the hypothesis that treating
-them as such, and clearly separating them as two entities being
-developed on their own, could overall facilitate the development of the
-entire project.
+Installation
+------------
+Unless they wish to use a “native ODK environment” (see below), most
+users will not need to manually install this package. Instead, they will
+use it through one of the [Docker
+images](https://hub.docker.com/u/obolibrary) provided by the ODK project
+– those images will include the `odk-core` package and its `odk` script.
 
-Therefore, the aim of this “ODK Core” project is to provide the ODK’s
-executable workflows and seeding/updating script, independently of the
-ODK Docker image. Once it will have reached maturity (if it does!), the
-idea is then that the ODK Core will become merely one of the tools
-provided by the ODK Docker image.
+The package _can_ definitely be used independently of the Docker images
+though. For that, it can be installed as any other Python packages,
+either from [PyPI](https://pypi.org/project/odk-core/):
 
-A secondary goal is to make it possible to seed, update, and use a
-ODK-managed repository _without_ using the Docker image at all.
+```sh
+$ python -m pip install odk-core
+```
 
-Setting up a ODK environment
-----------------------------
-Installing the `odk-core` package (this project) with `pip` (or similar
-tool) will automatically install all the Python packages required to run
-the `odk` script itself (e.g. to seed or update a ODK project).
+or from a release tarball
+```sh
+$ curl -L -O https://github.com/INCATools/odkcore/releases/download/odkcore-X.Y.Z/odk_core-X.Y.Z.tar.gz
+$ tar xf odk_core-X.Y.Z.tar.gz
+$ python -m pip install ./odk_core-X.Y.Z
+```
+
+Setting up a native ODK environment
+-----------------------------------
+Installing the `odk-core` package as shown above will automatically
+install all the Python packages required to run the `odk` script (e.g.
+to seed or update a ODK-managed repository).
 
 In addition, installing the package with the `workflows` “extra” (as in
 `pip install odk-core[workflows]` will also install all the Python
@@ -51,6 +50,9 @@ the PATH. The various tools used by ODK workflows are:
 * [GNU Make](https://www.gnu.org/software/make/) (always required – note
   that we do mean specifically **GNU** Make, other flavours of Make may
   not work),
+* a [Java Runtime
+  Environment](https://www.oracle.com/java/technologies/downloads/)
+  (JRE; always required),
 * [ROBOT](https://robot.obolibrary.org/) (always required),
 * [Dicer-CLI](https://incenp.org/dvlpt/dicer/dicer-cli/index.html)
   (always required),
@@ -78,9 +80,36 @@ plugins used by ODK workflows are:
   plugin](https://incenp.org/dvlpt/sssom-java/sssom-robot/index.html)
   (required for projects using SSSOM mappings).
 
-The easiest way (and, for now, the only really supported way) to get
-such an environment is to use the [ODK Docker
-image](https://github.com/INCATools/ontology-development-kit).
+When using the ODK through one of the Docker images, all those
+requirements are automatically met. When _not_ using the Docker images,
+it is the user’s responsibility to ensure they are met, before ODK
+workflows can be run. The `odk` script provides a command to help with
+that:
+
+```sh
+$ odk install /path/to/my/env
+```
+
+That command will initialise the `/path/to/my/env` directory as a
+“native ODK environment”, containing all the tools and ROBOT plugins
+mentioned above (except GNU Make and the JRE, which are always expected
+to be already available on the system).
+
+To use the newly initialised environment, source the
+`bin/activate-odk-environment.sh` script:
+
+```sh
+$ . /path/to/my/env/bin/activate-odk-environment.sh
+```
+
+The current shell is then ready to run ODK workflows.
+
+Note that ODK native environments are only supported for the following
+platforms:
+
+* GNU/Linux x86_64,
+* macOS x86_64,
+* and macOS arm64.
 
 
 Developing ODK-Core
@@ -131,6 +160,20 @@ repository with:
 
 ```sh
 odk-dev seed -g -C config.yaml [...]
+```
+
+Note the `-g` option in the `seed` commands above: it instructs the
+seeding script _not_ to build the ontology in the newly seeded
+repository. This is because building the ontology would require a full
+ODK environment.
+
+To be able to test building the ontology (or running any kind of ODK
+workflows more generally), first create a native ODK environment, then
+activate it:
+
+```sh
+$ odk-dev install /my/test/env
+$ . /my/test/env/bin/activate-odk-environment.sh
 ```
 
 

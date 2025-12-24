@@ -9,7 +9,7 @@ authors = [
 ]
 readme = "README.md"
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering",
@@ -27,7 +27,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "http://incatools.github.io/ontology-development-kit"
-Repository = "https://github.com/gouttegd/odkcore"
+Repository = "https://github.com/INCATools/odkcore"
 
 [project.scripts]
 odk = "incatools.odk.cli:main"
