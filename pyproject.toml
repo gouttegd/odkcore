@@ -23,6 +23,7 @@ dependencies = [
     "defusedxml",
     "jinja2",
     "pyyaml",
+    "requests"
 ]
 
 [project.urls]
