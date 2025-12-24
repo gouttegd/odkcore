@@ -122,7 +122,7 @@ manager. Type checking is ensured through
 Set up the development environment with:
 
 ```sh
-uv sync --dev --extra workflows
+$ uv sync --dev --extra workflows
 ```
 
 from within the project’s checked out repository. The `--extra
@@ -133,7 +133,7 @@ workflows.
 To test seeding a ODK repository:
 
 ```sh
-uv run odk seed -C config.yaml -g [other seeding options...]
+$ uv run odk seed -C config.yaml -g [other seeding options...]
 ```
 
 Note the `-g` option, which instructs the seeding process not to try
@@ -146,36 +146,39 @@ ODK-Core was checked out. To run a `odk` command from anywhere else, use
 UV’s `--project` option:
 
 ```sh
-uv --project /path/to/odk-core run odk seed -C config.yaml -g [...]
+$ uv --project /path/to/odk-core run odk seed -C config.yaml -g [...]
 ```
 
 I’d recommend setting up an alias like:
 
 ```sh
-alias odk-dev="uv --project /path/to/odk-core run odk"
+$ alias odk-dev="uv --project /path/to/odk-core run odk"
 ```
 
 so that you can use `odk-dev` from anywhere, e.g. try seeding a
 repository with:
 
 ```sh
-odk-dev seed -g -C config.yaml [...]
+$ odk-dev seed -g -C config.yaml [...]
 ```
 
-Note the `-g` option in the `seed` commands above: it instructs the
-seeding script _not_ to build the ontology in the newly seeded
-repository. This is because building the ontology would require a full
-ODK environment.
-
-To be able to test building the ontology (or running any kind of ODK
-workflows more generally), first create a native ODK environment, then
-activate it:
+To be able to test running a ODK workflow, instead of merely seeding a
+ODK repository, first create a native ODK environment, then activate it:
 
 ```sh
 $ odk-dev install /my/test/env
 $ . /my/test/env/bin/activate-odk-environment.sh
 ```
 
+It is then possible to seed a repository without skipping the building
+of the initial release, and more generally to run any workflow within
+the newly seeded repository:
+
+```sh
+$ odk-dev seed -C config.yaml [...]
+$ cd target/<myont>/src/ontology
+$ make clean refresh-imports
+```
 
 Copying
 -------

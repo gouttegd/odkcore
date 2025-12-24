@@ -1,3 +1,9 @@
+Changes in odk-core 0.1.3 (2025-12-24)
+--------------------------------------
+
+  * Use latest versions of SSSOM-Java and the ODK ROBOT plugin.
+  * Make sure rdftab is installed in a native environment.
+
 Changes in odk-core 0.1.2 (2025-12-14)
 --------------------------------------
 

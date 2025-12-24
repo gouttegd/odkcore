@@ -1,6 +1,6 @@
 [project]
 name = "odk-core"
-version = "0.1.2"
+version = "0.1.3"
 description = "Ontology Development Kit Core"
 license = "BSD-3-Clause"
 authors = [
