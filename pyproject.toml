@@ -42,6 +42,8 @@ build-backend = "uv_build"
 module-name = "incatools.odk"
 source-include = [
     "NEWS",
+    "examples/**",
+    "tests/**",
 ]
 
 [dependency-groups]
