@@ -773,6 +773,7 @@ refresh-imports-excluding-large:
 
 .PHONY: refresh-%
 refresh-%:
+	rm -f $(TMPDIR)/download-mirror-$*.owl.info
 	$(MAKE) --assume-new=$(SRC) --assume-new=$(IMPORTDIR)/$*_terms.txt \
 		IMP=true IMP_LARGE=true MIR=true PAT=false $(IMPORTDIR)/$*_import.owl
 
@@ -805,6 +806,7 @@ no-mirror-recreate-components:
 
 .PHONY: recreate-%
 recreate-%:
+	rm -f $(TMPDIR)/download-component-$*.owl.info
 	$(MAKE) --assume-new=$(TMPDIR)/stamp-component-$*.owl \
 		COMP=true IMP=false MIR=true PAT=true $(COMPONENTSDIR)/$*.owl
 
@@ -824,23 +826,21 @@ $(TMPDIR)/stamp-component-%.owl: | $(TMPDIR)
 {%   for component in project.components.products -%}
 {%     if component.source is not none -%}
 ifeq ($(MIR),true)
-.PHONY: component-download-{{ component.filename }}
-component-download-{{ component.filename }}: | $(TMPDIR)
-	$(ROBOT) merge -I {{ component.source }} \{% if component.make_base %}
-		 remove {% for iri in component.base_iris %}--base-iri {{ iri }} \
-		        {% endfor %}--axioms external --preserve-structure false --trim false \{% endif %}
-		 annotate --annotation owl:versionInfo $(VERSION) --output $(TMPDIR)/$@.owl
+.PHONY: download-component-{{ component.filename }}
+download-component-{{ component.filename }}: | $(TMPDIR)
+	@odk-helper download --output $(TMPDIR)/$@ \
+	                     --reference $(COMPONENTSDIR)/{{ component.filename }} \
+	                     {{ component.source }}
 
-$(COMPONENTSDIR)/{{ component.filename }}: component-download-{{ component.filename }} $(TMPDIR)/stamp-component-{{ component.filename }}
-	@if cmp -s $(TMPDIR)/component-download-{{ component.filename }}.owl $(TMPDIR)/component-download-{{ component.filename }}.tmp.owl ; then \
-	        echo "Component identical." ; \
-	else \
-	        echo "Component different, updating." && \
-	        cp $(TMPDIR)/component-download-{{ component.filename }}.owl $(TMPDIR)/component-download-{{ component.filename }}.tmp.owl && \
-	        $(ROBOT) annotate --input $(TMPDIR)/component-download-{{ component.filename }}.owl \
-	                          --ontology-iri $(ONTBASE)/$@ $(ANNOTATE_ONTOLOGY_VERSION) \
-	                          --output $@ ; \
+$(COMPONENTSDIR)/{{ component.filename }}: download-component-{{ component.filename }} $(TMPDIR)/stamp-component-{{ component.filename }}
+	@if [ -f $(TMPDIR)/download-component-{{ component.filename }} ]; then \
+		$(ROBOT) merge -i $(TMPDIR)/download-component-{{ component.filename }} \{% if component.make_base %}
+		         remove {% for iri in component.base_iris %}--base-iri {{ iri }} \
+		                 {% endfor %}--axioms external --preserve-structure false --trim false \{% endif %}
+		         annotate --ontology-iri $(ONTBASE)/$@ $(ANNOTATE_ONTOLOGY_VERSION) \
+		                  --output $@ ; \
 	fi
+
 .PRECIOUS: $(COMPONENTSDIR)/{{ component.filename }}
 endif # MIR=true
 
@@ -864,61 +864,58 @@ $(COMPONENTSDIR)/{{ component.filename }}:{% for mapping in component.mappings %
 {%   endfor -%}
 endif # COMP=true
 {% endif %}{# ! project.components is not none -#}
+
 {% if project.import_group is defined -%}
 # ----------------------------------------
 # Mirroring upstream ontologies
 # ----------------------------------------
 
 ifeq ($(MIR),true)
-{% for ont in project.import_group.products %}
+{%   for ont in project.import_group.products -%}
 
 ## ONTOLOGY: {{ ont.id }}
-{% if ont.description  -%}
+{%     if ont.description  -%}
 ## {{ ont.description }}
-{% endif -%}
+{%     endif -%}
 
-{%- if ont.mirror_type != 'no_mirror' -%}
-.PHONY: mirror-{{ ont.id }}
+{%     if ont.mirror_type != 'no_mirror' -%}
+.PHONY: download-mirror-{{ ont.id }}
 .PRECIOUS: $(MIRRORDIR)/{{ ont.id }}.owl
-{%- endif -%}
+download-mirror-{{ ont.id }}: | $(TMPDIR)
+	odk-helper download --output $(TMPDIR)/$@.owl \
+	                    --reference $(MIRRORDIR)/{{ ont.id }}.owl \
+	                    {% if ont.mirror_from %}{{ ont.mirror_from }}{% elif ont.use_base %}$(OBOBASE)/{{ ont.id }}/{{ ont.id }}-base.owl{% else %}$(OBOBASE)/{{ ont.id }}.owl{% endif %}
 
-{%- if ont.is_large %}
+{%       if ont.mirror_type == 'custom' -%}
+$(MIRRORDIR)/{{ ont.id }}.owl:
+	@echo "ERROR: You have configured your default mirror type to be custom;
+	@echo "       this behavior needs to be overwritten in {{ project.id }}.Makefile!"
+	@false
+
+{%       else -%}
+{%         if ont.is_large -%}
 ifeq ($(IMP_LARGE),true)
-{%- endif %}
-{%- if ont.mirror_from %}
-mirror-{{ ont.id }}: | $(TMPDIR)
-	$(ROBOT) {% if ont.make_base or 'base' == ont.mirror_type %}remove -I {{ ont.mirror_from }} {% if ont.base_iris is not none %}{% for iri in ont.base_iris %}--base-iri {{iri}} {% endfor %}{% else %}--base-iri $(OBOBASE)/{{ ont.id.upper() }} {% endif %} --axioms external --preserve-structure false --trim false{% else %}convert -I {{ ont.mirror_from }}{% endif %} -o $(TMPDIR)/$@.owl
-{%- elif ont.use_base %}
-{%- if ont.use_gzipped %}
-mirror-{{ ont.id }}: | $(TMPDIR)
-	curl -L $(OBOBASE)/{{ ont.id }}/{{ ont.id }}-base.owl.gz --create-dirs -o $(MIRRORDIR)/{{ ont.id }}-base.owl.gz --retry {{project.import_group.mirror_retry_download}} --max-time {{ project.import_group.mirror_max_time_download }} && \
-	$(ROBOT) {% if ont.make_base or 'base' == ont.mirror_type %}remove -i $(MIRROR_DIR)/{{ ont.id }}-base.owl.gz {% if ont.base_iris is not none %}{% for iri in ont.base_iris %}--base-iri {{iri}} {% endfor %}{ else %}--base-iri $(OBOBASE)/{{ ont.id.upper() }} {% endif %} --axioms external --preserve-structure false --trim false{% else %}convert -i $(MIRRORDIR)/{{ ont.id }}-base.owl.gz{% endif %} -o $(TMPDIR)/$@.owl
-{%- else %}
-mirror-{{ ont.id }}: | $(TMPDIR)
-	curl -L $(OBOBASE)/{{ ont.id }}/{{ ont.id }}-base.owl --create-dirs -o $(TMPDIR)/{{ ont.id }}-download.owl --retry {{ project.import_group.mirror_retry_download }} --max-time {{ project.import_group.mirror_max_time_download }} && \
-	$(ROBOT) convert -i $(TMPDIR)/{{ ont.id }}-download.owl -o $(TMPDIR)/$@.owl
-{%- endif %}
-{%- else %}
-{%- if ont.use_gzipped %}
-mirror-{{ ont.id }}: | $(TMPDIR)
-	curl -L $(OBOBASE)/{{ ont.id }}.owl.gz --create-dirs -o $(MIRRORDIR)/{{ ont.id }}.owl.gz --retry {{ project.import_group.mirror_retry_download }} --max-time {{ project.import_group.mirror_max_time_download }} && \
-	$(ROBOT) {% if ont.make_base or 'base' == ont.mirror_type %}remove -i $(MIRRORDIR)/{{ ont.id }}.owl.gz {% if ont.base_iris is not none %}{% for iri in ont.base_iris %}--base-iri {{iri}} {% endfor %}{% else %}--base-iri $(OBOBASE)/{{ ont.id.upper() }} {% endif %}--axioms external --preserve-structure false --trim false{% else %}convert -i $(MIRRORDIR)/{{ ont.id }}.owl.gz{% endif %} -o $(TMPDIR)/$@.owl
-{%- elif 'custom' == ont.mirror_type %}
-$(MIRRORDIR)/{{ ont.id }}.owl: 
-	echo "ERROR: You have configured your default mirror type to be custom; this behavior needs to be overwritten in {{ project.id }}.Makefile!" && false
-{%- elif 'no_mirror' == ont.mirror_type -%}
-## You have configured your default mirror type to no_mirror.
-{%- else %}
-mirror-{{ ont.id }}: | $(TMPDIR)
-	curl -L $(OBOBASE)/{{ ont.id }}.owl --create-dirs -o $(TMPDIR)/{{ ont.id }}-download.owl --retry {{ project.import_group.mirror_retry_download }} --max-time {{ project.import_group.mirror_max_time_download }} && \
-	$(ROBOT) {% if ont.make_base or 'base' == ont.mirror_type %}remove -i $(TMPDIR)/{{ ont.id }}-download.owl {% if ont.base_iris is not none %}{% for iri in ont.base_iris %}--base-iri {{iri}} {% endfor %}{% else %}--base-iri $(OBOBASE)/{{ ont.id.upper() }} {% endif %}--axioms external --preserve-structure false --trim false{% else %}convert -i $(TMPDIR)/{{ ont.id }}-download.owl{% endif %} -o $(TMPDIR)/$@.owl
-{%- endif %}
-{%- endif %}
-{%- if ont.is_large %}
+{%         endif -%}
+$(MIRRORDIR)/{{ ont.id }}.owl: download-mirror-{{ ont.id }}
+	@if [ -f $(TMPDIR)/download-mirror-{{ ont.id }}.owl ]; then \
+		$(ROBOT) {% if ont.make_base or 'base' == ont.mirror_type %}remove -i $(TMPDIR)/download-mirror-{{ ont.id }}.owl \{% if ont.base_iris is not none %}{% for iri in ont.base_iris %}
+		                --base-iri {{ iri }} \{% endfor %}{% else %}
+		                --base-iri $(OBOBASE)/{{ ont.id.upper() }} \{% endif %}
+		                --axioms external --preserve-structure false --trim false \
+		         convert {% else %}convert -i $(TMPDIR)/download-mirror-{{ ont.id }}.owl {% endif %}-o $@ ; \
+	fi
+
+{%         if ont.is_large -%}
 endif
-{%- endif %}
-{% endfor -%}
-{% if project.import_group.use_base_merging %}
+{%         endif -%}
+
+{%       endif -%}
+
+{%     endif %}{# !ont.mirror_type != 'no_mirror' -#}
+
+{%   endfor %}{# for ont in project.import_group.products -#}
+
+{%   if project.import_group.use_base_merging -%}
 ALL_MIRRORS = $(patsubst %, $(MIRRORDIR)/%.owl, $(IMPORTS))
 MERGE_MIRRORS = true
 
@@ -927,14 +924,10 @@ $(MIRRORDIR)/merged.owl: $(ALL_MIRRORS)
 	$(ROBOT) merge $(patsubst %, -i %, $^) {% if project.import_group.annotate_defined_by %}--annotate-defined-by true{% endif %} {% if project.import_group.base_merge_drop_equivalent_class_axioms %}remove --axioms equivalent --preserve-structure false {% endif %}-o $@
 .PRECIOUS: $(MIRRORDIR)/merged.owl
 endif
-{% endif %}
-
-$(MIRRORDIR)/%.owl: mirror-% | $(MIRRORDIR)
-	if [ -f $(TMPDIR)/mirror-$*.owl ]; then if cmp -s $(TMPDIR)/mirror-$*.owl $@ ; then echo "Mirror identical, ignoring."; else echo "Mirrors different, updating." &&\
-		cp $(TMPDIR)/mirror-$*.owl $@; fi; fi
+{%   endif -%}
 
 endif # MIR=true
-{% endif %}
+{% endif %}{# project.import_group is defined -#}
 
 {% if project.subset_group is defined %}
 # ----------------------------------------
@@ -1633,6 +1626,7 @@ clean:{% if project.use_dosdps %}
 		case $$reldir in .*|"") ;; *) rm -rf $$reldir/* ;; esac \
 	done
 	rm -f $(CLEANFILES)
+	rm -f $(TMPDIR)/download-*.info
 
 .PHONY: help
 help:
