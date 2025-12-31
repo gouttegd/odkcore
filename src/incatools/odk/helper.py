@@ -6,22 +6,26 @@
 # for the detailed conditions.
 
 import json
+import logging
 import shutil
 import subprocess
 from pathlib import Path
+from typing import List, Tuple
+from urllib.parse import urlparse
 
 import click
 from lightrdf import Parser as LightRDFParser  # type: ignore
 from rdflib import Graph
 
 from . import __version__
+from .download import Compression, DownloadError, RemoteFileInfo, download_file
 from .template import DEFAULT_TEMPLATE_DIR, RESOURCES_DIR
 
 
 @click.group()
 def main() -> None:
     """Helper commands for ODK workflows."""
-    pass
+    logging.basicConfig(level=logging.INFO)
 
 
 @main.command()
@@ -132,3 +136,78 @@ def info(tools) -> None:
         if tools:
             cmd.append("--tools")
         subprocess.run(cmd)
+
+
+@main.command()
+@click.argument("url")
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path),
+    help="""Write the downloaded file to the specified location.
+            The default is derived from the URL.""",
+)
+@click.option(
+    "-r",
+    "--reference",
+    type=click.Path(path_type=Path),
+    help="""Use the specified file as reference to decide whether to
+            download the file again. The default is to use the file
+            specified with the --output option.""",
+)
+@click.option(
+    "-i",
+    "--cache-info",
+    type=click.Path(path_type=Path),
+    help="""Read/write cache data from/to the specified file. The
+            default is the same location as specified with the
+            --reference option plus an added '.info' extension.""",
+)
+@click.option("--max-retry", default=0, metavar="N", help="Retry at most N times.")
+@click.option(
+    "--try-gzip/--no-try-gzip",
+    default=True,
+    help="""Given the URL "U", automatically attempt to download "U.gz",
+            then fallback to "U". This is enabled by default, unless the
+            provided URL already points to a compressed file.""",
+)
+def download(url, output, reference, cache_info, max_retry, try_gzip) -> None:
+    """Download a file."""
+
+    urlpath = Path(urlparse(url).path)
+    compression = Compression.from_extension(urlpath)
+
+    attempts: List[Tuple[str, Compression]] = []
+    if compression == Compression.NONE and try_gzip:
+        attempts.append((url + ".gz", Compression.GZIP))
+    attempts.append((url, compression))
+
+    if output is None:
+        output = Path(urlpath.name)
+        if not output.name:
+            raise click.ClickException(
+                f"Explicit output name required for downloading from {url}"
+            )
+    if reference is None:
+        reference = output
+    if cache_info is None:
+        cache_info = output.with_suffix(output.suffix + ".info")
+
+    info = RemoteFileInfo()
+    if reference.exists():
+        info.from_cache_file(cache_info)
+        if reference != output and output.exists():
+            output.unlink()
+
+    try:
+        for u, c in attempts:
+            status = download_file(u, output, info, max_retry, c)
+            if status == 200:
+                info.to_file(cache_info)
+                return
+            elif status == 304:
+                return
+        if status == 404:  # Last attempt failed
+            raise click.ClickException(f"Cannot download {url}: 404 Not Found")
+    except DownloadError as e:
+        raise click.ClickException(f"Cannot download {url}: {e}")
