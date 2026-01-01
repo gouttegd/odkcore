@@ -163,7 +163,12 @@ def info(tools) -> None:
             default is the same location as specified with the
             --reference option plus an added '.info' extension.""",
 )
-@click.option("--max-retry", default=0, metavar="N", help="Retry at most N times.")
+@click.option(
+    "--max-retry",
+    default=4,
+    metavar="N",
+    help="""Retry at most N times. Default is 4. Set to zero to disable retrying.""",
+)
 @click.option(
     "--try-gzip/--no-try-gzip",
     default=True,
