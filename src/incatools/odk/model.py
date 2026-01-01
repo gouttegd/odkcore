@@ -439,15 +439,14 @@ class ImportGroup(ProductGroup):
     mirror_retry_download: int = 4
     """How many times to try downloading the source of an import module.
 
-    This corresponds to the cURL --retry parameter,
+    This behaves similarly to cURL’s --retry parameter,
     see <http://www.ipgp.fr/~arnaudl/NanoCD/software/win32/curl/docs/curl.html>.
     """
 
     mirror_max_time_download: int = 200
     """How long downloading the source of an import module is allowed to take.
 
-    This corresponds to the cURL --max-time parameter (in seconds), see
-    <http://www.ipgp.fr/~arnaudl/NanoCD/software/win32/curl/docs/curl.html>.
+    DEPRECATED: This option no longer has any effect.
     """
 
     release_imports: bool = False
