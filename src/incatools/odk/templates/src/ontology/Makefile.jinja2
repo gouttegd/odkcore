@@ -884,7 +884,8 @@ ifeq ($(MIR),true)
 download-mirror-{{ ont.id }}: | $(TMPDIR)
 	odk-helper download --output $(TMPDIR)/$@.owl \
 	                    --reference $(MIRRORDIR)/{{ ont.id }}.owl \
-	                    {% if ont.mirror_from %}{{ ont.mirror_from }}{% elif ont.use_base %}$(OBOBASE)/{{ ont.id }}/{{ ont.id }}-base.owl{% else %}$(OBOBASE)/{{ ont.id }}.owl{% endif %}
+	                    --max-retry {{ project.import_group.mirror_retry_download }} \
+	                    {% if ont.mirror_from %}{{ ont.mirror_from }}{% elif ont.use_base %}$(OBOBASE)/{{ ont.id }}/{{ ont.id }}-base.owl{% if ont.use_gzipped %}.gz{% endif %}{% else %}$(OBOBASE)/{{ ont.id }}.owl{% if ont.use_gzipped %}.gz{% endif %}{% endif %}
 
 {%       if ont.mirror_type == 'custom' -%}
 $(MIRRORDIR)/{{ ont.id }}.owl:
