@@ -15,6 +15,7 @@ from gzip import GzipFile
 from hashlib import sha256
 from io import BufferedIOBase, BytesIO
 from pathlib import Path
+from time import sleep
 from typing import Dict, Iterator, Optional, Union
 from urllib.parse import urlparse
 
@@ -168,6 +169,7 @@ def download_file(
                 logging.warn(
                     f"{output.name}: Transient HTTP error, retrying ({n_try}/{max_retry}"
                 )
+                sleep(1)
             else:
                 response.raise_for_status()
         except requests.exceptions.ConnectTimeout:
@@ -177,6 +179,7 @@ def download_file(
                 logging.warn(
                     f"{output.name}: Timeout when connecting to {hostname}, retrying ({n_try}/{max_retry})"
                 )
+                sleep(1)
             else:
                 raise DownloadError(f"Timeout when connecting to {hostname}")
         except requests.exceptions.ConnectionError:
