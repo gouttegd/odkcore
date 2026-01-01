@@ -1140,7 +1140,7 @@ endif
 
 validate-sssom-%:
 	tsvalid $(MAPPINGDIR)/$*.sssom.tsv --comment "#"
-	sssom validate $(MAPPINGDIR)/$*.sssom.tsv
+	$(MAPPING_TESTER) $(MAPPINGDIR)/$*.sssom.tsv
 
 validate_mappings:
 	$(MAKE_FAST) $(foreach n,$(MAPPINGS),validate-sssom-$(n))
@@ -1161,7 +1161,7 @@ $(TMPDIR)/{{ mapping.id }}.obographs.json: {{ mapping.source_file }}
 		 convert --check false --format json --output $@
 
 $(MAPPINGDIR)/{{ mapping.id }}.sssom.tsv: $(TMPDIR)/{{ mapping.id }}.obographs.json
-	sssom parse $< -I obographs-json {{ mapping.sssom_tool_options }} -o $@
+	$(SSSOMPY) parse $< -I obographs-json {{ mapping.sssom_tool_options }} -o $@
 
 {%         elif project.sssom_mappingset_group.mapping_extractor == "sssom-java" -%}
 $(MAPPINGDIR)/{{ mapping.id }}.sssom.tsv: {{ mapping.source_file }} | all_robot_plugins
