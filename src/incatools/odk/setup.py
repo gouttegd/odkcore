@@ -259,6 +259,7 @@ class GithubTool(Tool):
                         f.extract(member, path=target.bindir)
 
         dstfile.chmod(0o755)
+        archive.unlink()
 
 
 class RdftabTool(Tool):

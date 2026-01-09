@@ -46,6 +46,9 @@ source-include = [
     "tests/**",
 ]
 
+[tool.ruff.lint]
+select = [ "E4", "E7", "E9", "F", "I" ]
+
 [[tool.mypy.overrides]]
 module = ["incatools.odk.*"]
 follow_untyped_imports = true
