@@ -1,4 +1,4 @@
-name: Static code quality tests
+name: Static code quality tests and unit tests
 
 on:
   push:
@@ -35,8 +35,12 @@ jobs:
       - name: Install Python dependencies
         run: uv sync --dev --all-extras
       - name: Code linting
-        run: uv run ruff check src
+        run: uv run ruff check src tests
       - name: Code formatting
-        run: uv run ruff format --check src
+        run: uv run ruff format --check src tests
       - name: Static type checking
-        run: uv run mypy src
+        run: |
+          uv run mypy src
+          uv run mypy tests
+      - name: Unit tests
+        run: uv run pytest tests
