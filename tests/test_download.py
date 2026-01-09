@@ -6,11 +6,10 @@
 # for the detailed conditions.
 
 import unittest
-
 from pathlib import Path
 from time import sleep
 
-from incatools.odk.download import download_file, RemoteFileInfo
+from incatools.odk.download import RemoteFileInfo, download_file
 
 
 class TestDownload(unittest.TestCase):
