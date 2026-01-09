@@ -46,10 +46,15 @@ source-include = [
     "tests/**",
 ]
 
+[[tool.mypy.overrides]]
+module = ["incatools.odk.*"]
+follow_untyped_imports = true
+
 [dependency-groups]
 dev = [
     "ruff",
     "mypy",
+    "pytest",
     "types-PyYAML",
     "types-defusedxml",
     "types-requests",
