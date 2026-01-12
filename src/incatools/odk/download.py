@@ -162,11 +162,11 @@ def download_file(
                 logging.info(f"{output.name}: Not modified at {url}")
                 return 304
             elif response.status_code == 404:
-                logging.warn(f"{output.name}: Not found at {url}")
+                logging.warning(f"{output.name}: Not found at {url}")
                 return 404
             elif response.status_code in RETRIABLE_HTTP_ERRORS and n_try < max_retry:
                 n_try += 1
-                logging.warn(
+                logging.warning(
                     f"{output.name}: Transient HTTP error, retrying ({n_try}/{max_retry}"
                 )
                 sleep(1)
@@ -176,7 +176,7 @@ def download_file(
             # `curl --retry` retries on timeout errors, and so do we
             if n_try < max_retry:
                 n_try += 1
-                logging.warn(
+                logging.warning(
                     f"{output.name}: Timeout when connecting to {hostname}, retrying ({n_try}/{max_retry})"
                 )
                 sleep(1)
