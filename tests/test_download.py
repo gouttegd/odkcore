@@ -33,7 +33,6 @@ class TestDownload(unittest.TestCase):
         code = download_file(self.url, self.downloaded_file, ri, max_retry=5)
         if code != 200:
             self.skipTest(f"Could not dowload from {self.url}, cannot test")
-            return
 
         self.assertTrue(self.downloaded_file.exists())
         mtime = self.downloaded_file.stat().st_mtime
@@ -55,7 +54,6 @@ class TestDownload(unittest.TestCase):
         code = download_file(self.url, self.downloaded_file, ri, max_retry=5)
         if code != 200:
             self.skipTest(f"Could not download from {self.url}, cannot test")
-            return
 
         mtime = self.downloaded_file.stat().st_mtime
 
