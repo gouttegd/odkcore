@@ -32,7 +32,7 @@ class TestDownload(unittest.TestCase):
         ri = RemoteFileInfo()
         code = download_file(self.url, self.downloaded_file, ri, max_retry=5)
         if code != 200:
-            self.skipTest(f"Could not dowload from {self.url}, cannot test")
+            self.skipTest(f"Could not download from {self.url}, cannot test")
 
         self.assertTrue(self.downloaded_file.exists())
         mtime = self.downloaded_file.stat().st_mtime
@@ -40,7 +40,7 @@ class TestDownload(unittest.TestCase):
         sleep(1)
         code = download_file(self.url, self.downloaded_file, ri, max_retry=5)
 
-        # Either the server tols us the file had not been modified, or
+        # Either the server told us the file had not been modified, or
         # the download function checked the newly downloaded file is the
         # same as the one downloaded just before. Either way, we should
         # get a 304, and the file should not have been touched.
