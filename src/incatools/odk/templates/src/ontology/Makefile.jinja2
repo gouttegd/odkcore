@@ -1585,8 +1585,11 @@ update_docs:
 # current directory is a way to ensure we only clean up directories that
 # are located below the current directory, regardless of the contents of
 # the *DIR variables.
+#
+# This is a double-colon rule to allow another clean target to be defined
+# in {{ project.id }}.Makefile without overriding this one.
 .PHONY: clean
-clean:{% if project.use_dosdps %}
+clean::{% if project.use_dosdps %}
 	$(MAKE) pattern_clean{%- endif %}
 	for dir in $(MIRRORDIR) $(TMPDIR) $(UPDATEREPODIR) ; do      \
 		reldir=$$(realpath --relative-to=$$(pwd) $$dir) ;    \
