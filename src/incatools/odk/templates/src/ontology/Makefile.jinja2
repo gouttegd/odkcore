@@ -373,6 +373,7 @@ $(REPORTDIR)/$(SRC)-align-report.tsv: $(SRCMERGED) | $(REPORTDIR) all_robot_plug
 	$(ROBOT) odk:check-align -i $< --reasoner $(REASONER) \
 		 --upper-ontology-iri {{ project.robot.report.upper_ontology }}
 		 {%- if project.robot.report.use_base_iris %} \
+		 --detail BASE-ROOT \
 		 {% if project.namespaces is not none %}{% for iri in project.namespaces %}--base-iri {{ iri }} \
 		 {% endfor %}{% else %}--base-iri $(URIBASE)/{{ project.id.upper() }}_ --base-iri $(URIBASE)/{{ project.id }} \
 		 {% endif %}{% else %} \
@@ -382,6 +383,7 @@ $(REPORTDIR)/%-align-report.tsv: % | $(REPORTDIR) all_robot_plugins
 	$(ROBOT) odk:check-align -i $< --reasoner $(REASONER) \
 		 --upper-ontology-iri {{ project.robot.report.upper_ontology }}
 		 {%- if project.robot.report.use_base_iris %} \
+		 --detail BASE-ROOT \
 		 {% if project.namespaces is not none %}{% for iri in project.namespaces %}--base-iri {{ iri }} \
 		 {% endfor %}{% else %}--base-iri $(URIBASE)/{{ project.id.upper() }}_ --base-iri $(URIBASE)/{{ project.id }} \
 		 {% endif %}{% else %} \

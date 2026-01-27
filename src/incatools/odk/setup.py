@@ -24,7 +24,7 @@ DICER_SOURCE = "https://github.com/gouttegd/dicer/releases/download/dicer-0.2.1/
 SSSOM_SOURCE = "https://github.com/gouttegd/sssom-java/releases/download/sssom-java-1.10.0/sssom-cli-1.10.0.jar"
 DOSDP_SOURCE = "https://github.com/INCATools/dosdp-tools/releases/download/v0.19.3/dosdp-tools-0.19.3.tgz"
 RELGR_SOURCE = "https://github.com/INCATools/relation-graph/releases/download/v2.3.3/relation-graph-cli-2.3.3.tgz"
-ODK_PLUGIN_SOURCE = "https://github.com/INCATools/odk-robot-plugin/releases/download/odk-robot-plugin-0.3.0/odk.jar"
+ODK_PLUGIN_SOURCE = "https://github.com/INCATools/odk-robot-plugin/releases/download/odk-robot-plugin-0.3.1/odk.jar"
 SSSOM_PLUGIN_SOURCE = "https://github.com/gouttegd/sssom-java/releases/download/sssom-java-1.10.0/sssom-robot-plugin-1.10.0.jar"
 OBO_EPM_SOURCE = "https://raw.githubusercontent.com/biopragmatics/bioregistry/main/exports/contexts/obo.epm.json"
 
