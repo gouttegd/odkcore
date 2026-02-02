@@ -191,6 +191,10 @@ Datatype: rdf:PlainLiteral
 imports/%_import.owl: mirror/%.owl
 	echo "ERROR: You have configured your default module type to be custom; this behavior needs to be overwritten in {{ project.id }}.Makefile!" && touch $@
 {%   endif -%}
+
+.PHONY: clean
+clean::
+	# Add any custom cleaning logic here.
 {%   if project.import_group.use_base_merging -%}
 {#
 
