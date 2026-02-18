@@ -19,7 +19,7 @@ from zipfile import ZipFile
 import requests
 from jinja2 import Template
 
-ROBOT_SOURCE = "https://github.com/ontodev/robot/releases/download/v1.9.8/robot.jar"
+ROBOT_SOURCE = "https://github.com/ontodev/robot/releases/download/v1.9.9/robot.jar"
 DICER_SOURCE = "https://github.com/gouttegd/dicer/releases/download/dicer-0.2.1/dicer-cli-0.2.1.jar"
 SSSOM_SOURCE = "https://github.com/gouttegd/sssom-java/releases/download/sssom-java-1.10.0/sssom-cli-1.10.0.jar"
 DOSDP_SOURCE = "https://github.com/INCATools/dosdp-tools/releases/download/v0.19.3/dosdp-tools-0.19.3.tgz"
